@@ -11,6 +11,11 @@ import { cn } from '../lib/utils'
 export function VoiceRecorder() {
   const useWhisper = isWhisperConfigured()
 
+  // Log which mode we're using
+  useEffect(() => {
+    console.log('🎤 Voice Recorder Mode:', useWhisper ? 'WHISPER API ✅' : 'Web Speech API (fallback)')
+  }, [useWhisper])
+
   // Web Speech API (fallback)
   const speechRecognition = useSpeechRecognition()
 
@@ -39,27 +44,33 @@ export function VoiceRecorder() {
 
     if (isRecording) {
       // Stop recording
+      console.log('⏹️ Stopping recording...')
       if (useWhisper) {
+        console.log('📤 Using Whisper API for transcription')
         setIsTranscribing(true)
         try {
           const audioBlob = await audioRecorder.stopRecording()
 
           if (audioBlob) {
+            console.log('🎵 Audio blob size:', audioBlob.size, 'bytes')
             // Transcribe with Whisper
             const transcribedText = await transcribeAudio(audioBlob)
+            console.log('✅ Whisper transcription result:', transcribedText)
             setTranscript(transcribedText)
           }
         } catch (err: any) {
-          console.error('Transcription error:', err)
+          console.error('❌ Transcription error:', err)
           setError(err.message || 'Failed to transcribe audio')
         } finally {
           setIsTranscribing(false)
         }
       } else {
+        console.log('🌐 Using Web Speech API')
         speechRecognition.stopListening()
       }
     } else {
       // Start recording
+      console.log('🎙️ Starting recording with:', useWhisper ? 'Whisper' : 'Web Speech API')
       setTranscript('')
 
       if (useWhisper) {

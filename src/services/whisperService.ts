@@ -58,5 +58,11 @@ export async function transcribeAudio(audioBlob: Blob): Promise<string> {
 }
 
 export function isWhisperConfigured(): boolean {
-  return !!import.meta.env.VITE_OPENAI_API_KEY
+  const hasKey = !!import.meta.env.VITE_OPENAI_API_KEY
+  console.log('🔍 Whisper API Check:', {
+    configured: hasKey,
+    keyPresent: hasKey ? 'YES - Whisper will be used' : 'NO - Using Web Speech API',
+    keyPrefix: hasKey ? import.meta.env.VITE_OPENAI_API_KEY?.substring(0, 8) + '...' : 'Not set'
+  })
+  return hasKey
 }
