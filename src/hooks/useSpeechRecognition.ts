@@ -36,23 +36,21 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
 
     recognition.onresult = (event: any) => {
       let interimTranscript = ''
-      let finalTranscript = ''
 
-      // Process all results from the beginning
-      for (let i = 0; i < event.results.length; i++) {
+      // Process only new results starting from resultIndex
+      for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcriptPiece = event.results[i][0].transcript
         if (event.results[i].isFinal) {
-          finalTranscript += transcriptPiece + ' '
+          // Append final results to the ref (permanent storage)
+          finalTranscriptRef.current += transcriptPiece + ' '
         } else {
+          // Interim results are temporary
           interimTranscript += transcriptPiece
         }
       }
 
-      // Update the ref with the latest final transcript
-      finalTranscriptRef.current = finalTranscript
-
-      // Set the transcript to final + interim (interim is temporary)
-      setTranscript(finalTranscript + interimTranscript)
+      // Display: permanent final results + temporary interim results
+      setTranscript(finalTranscriptRef.current + interimTranscript)
     }
 
     recognition.onerror = (event: any) => {
