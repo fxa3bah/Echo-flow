@@ -15,6 +15,7 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
   const [isListening, setIsListening] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const recognitionRef = useRef<any | null>(null)
+  const finalTranscriptRef = useRef('')
 
   const isSupported = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window
 
@@ -37,7 +38,8 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
       let interimTranscript = ''
       let finalTranscript = ''
 
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      // Process all results from the beginning
+      for (let i = 0; i < event.results.length; i++) {
         const transcriptPiece = event.results[i][0].transcript
         if (event.results[i].isFinal) {
           finalTranscript += transcriptPiece + ' '
@@ -46,10 +48,11 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
         }
       }
 
-      setTranscript((prev) => {
-        const newTranscript = prev + finalTranscript
-        return newTranscript + interimTranscript
-      })
+      // Update the ref with the latest final transcript
+      finalTranscriptRef.current = finalTranscript
+
+      // Set the transcript to final + interim (interim is temporary)
+      setTranscript(finalTranscript + interimTranscript)
     }
 
     recognition.onerror = (event: any) => {
@@ -97,6 +100,7 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
 
   const resetTranscript = useCallback(() => {
     setTranscript('')
+    finalTranscriptRef.current = ''
   }, [])
 
   return {
