@@ -30,27 +30,21 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
 
     const recognition = new SpeechRecognitionAPI()
     recognition.continuous = true
-    recognition.interimResults = true
+    recognition.interimResults = false  // Disabled to prevent duplication
     recognition.lang = 'en-US'
     recognition.maxAlternatives = 1
 
     recognition.onresult = (event: any) => {
-      let interimTranscript = ''
-
-      // Process only new results starting from resultIndex
+      // Process only final results
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcriptPiece = event.results[i][0].transcript
         if (event.results[i].isFinal) {
-          // Append final results to the ref (permanent storage)
+          const transcriptPiece = event.results[i][0].transcript
           finalTranscriptRef.current += transcriptPiece + ' '
-        } else {
-          // Interim results are temporary
-          interimTranscript += transcriptPiece
         }
       }
 
-      // Display: permanent final results + temporary interim results
-      setTranscript(finalTranscriptRef.current + interimTranscript)
+      // Update display with accumulated final results
+      setTranscript(finalTranscriptRef.current)
     }
 
     recognition.onerror = (event: any) => {
