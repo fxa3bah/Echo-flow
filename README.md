@@ -9,8 +9,9 @@ A fast, intuitive voice-first productivity web application that combines quick v
 
 ### 🎙️ Voice Recording
 - **One-tap voice recording** with instant transcription
-- Powered by the Web Speech API for high accuracy
-- Supports multiple languages and non-native accents
+- **Dual Mode**: OpenAI Whisper (preferred) or Web Speech API (fallback)
+- **Whisper Mode**: Industry-leading accuracy, 99+ languages, better accent support
+- **Cost**: Only $0.006 per minute with Whisper ($0.60 for 100 minutes)
 - Audio automatically deleted after transcription for privacy
 
 ### 🤖 AI-Powered Categorization
@@ -58,6 +59,7 @@ A fast, intuitive voice-first productivity web application that combines quick v
 ### Prerequisites
 - Node.js 18+ and npm
 - Modern browser (Chrome, Edge, Safari, or Firefox)
+- (Optional but Recommended) OpenAI API key for Whisper transcription
 - (Optional) Ollama with llama3.2 model for enhanced AI features
 
 ### Installation
@@ -73,12 +75,28 @@ cd echo-flow
 npm install
 ```
 
-3. Start the development server:
+3. **(Recommended) Set up OpenAI Whisper for high-accuracy transcription:**
+
+   a. Get an API key from [OpenAI Platform](https://platform.openai.com/api-keys)
+
+   b. Create a `.env` file in the root directory:
+   ```bash
+   cp .env.example .env
+   ```
+
+   c. Add your API key to `.env`:
+   ```
+   VITE_OPENAI_API_KEY=sk-your-actual-key-here
+   ```
+
+   **Note:** If you skip this step, the app will automatically use the browser's Web Speech API as a fallback.
+
+4. Start the development server:
 ```bash
 npm run dev
 ```
 
-4. Open your browser to `http://localhost:5173`
+5. Open your browser to `http://localhost:5173`
 
 ### Building for Production
 
@@ -86,6 +104,17 @@ npm run dev
 npm run build
 npm run preview
 ```
+
+### Deploying to Vercel
+
+1. Push your code to GitHub
+2. Go to [vercel.com](https://vercel.com) and import your repository
+3. **Important:** Add your OpenAI API key as an environment variable:
+   - Go to Project Settings → Environment Variables
+   - Add: `VITE_OPENAI_API_KEY` = `sk-your-key-here`
+4. Deploy!
+
+Your app will automatically use Whisper for transcription once deployed with the API key.
 
 ## 🎯 Usage
 

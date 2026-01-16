@@ -1,31 +1,73 @@
 import { useEffect, useState } from 'react'
-import { Mic, MicOff, Save, X } from 'lucide-react'
+import { Mic, MicOff, Save, X, Loader2 } from 'lucide-react'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
+import { useAudioRecorder } from '../hooks/useAudioRecorder'
+import { transcribeAudio, isWhisperConfigured } from '../services/whisperService'
 import { db } from '../lib/db'
 import { aiService } from '../services/aiService'
 import type { Transcription } from '../types'
 import { cn } from '../lib/utils'
 
 export function VoiceRecorder() {
-  const {
-    transcript,
-    isListening,
-    startListening,
-    stopListening,
-    resetTranscript,
-    isSupported,
-    error,
-  } = useSpeechRecognition()
+  const useWhisper = isWhisperConfigured()
 
+  // Web Speech API (fallback)
+  const speechRecognition = useSpeechRecognition()
+
+  // Whisper API (preferred if configured)
+  const audioRecorder = useAudioRecorder()
+
+  const [transcript, setTranscript] = useState('')
+  const [isTranscribing, setIsTranscribing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleToggleRecording = () => {
-    if (isListening) {
-      stopListening()
+  const isRecording = useWhisper ? audioRecorder.isRecording : speechRecognition.isListening
+  const currentError = useWhisper ? audioRecorder.error : speechRecognition.error
+  const isSupported = useWhisper ? audioRecorder.isSupported : speechRecognition.isSupported
+
+  // Update transcript from Web Speech API
+  useEffect(() => {
+    if (!useWhisper && speechRecognition.transcript) {
+      setTranscript(speechRecognition.transcript)
+    }
+  }, [useWhisper, speechRecognition.transcript])
+
+  const handleToggleRecording = async () => {
+    setError(null)
+
+    if (isRecording) {
+      // Stop recording
+      if (useWhisper) {
+        setIsTranscribing(true)
+        try {
+          const audioBlob = await audioRecorder.stopRecording()
+
+          if (audioBlob) {
+            // Transcribe with Whisper
+            const transcribedText = await transcribeAudio(audioBlob)
+            setTranscript(transcribedText)
+          }
+        } catch (err: any) {
+          console.error('Transcription error:', err)
+          setError(err.message || 'Failed to transcribe audio')
+        } finally {
+          setIsTranscribing(false)
+        }
+      } else {
+        speechRecognition.stopListening()
+      }
     } else {
-      resetTranscript()
-      startListening()
+      // Start recording
+      setTranscript('')
+
+      if (useWhisper) {
+        await audioRecorder.startRecording()
+      } else {
+        speechRecognition.resetTranscript()
+        speechRecognition.startListening()
+      }
     }
   }
 
@@ -69,19 +111,24 @@ export function VoiceRecorder() {
       }
 
       setSaveSuccess(true)
-      resetTranscript()
+      setTranscript('')
+      if (!useWhisper) speechRecognition.resetTranscript()
       setTimeout(() => setSaveSuccess(false), 2000)
     } catch (error) {
       console.error('Failed to save transcription:', error)
-      alert('Failed to save transcription')
+      setError('Failed to save transcription')
     } finally {
       setIsSaving(false)
     }
   }
 
   const handleDiscard = () => {
-    resetTranscript()
-    stopListening()
+    setTranscript('')
+    setError(null)
+    if (!useWhisper) {
+      speechRecognition.resetTranscript()
+      speechRecognition.stopListening()
+    }
   }
 
   useEffect(() => {
@@ -92,8 +139,9 @@ export function VoiceRecorder() {
     return (
       <div className="text-center p-8 bg-destructive/10 rounded-lg">
         <p className="text-destructive">
-          Speech recognition is not supported in your browser.
-          Please use Chrome, Edge, or Safari.
+          {useWhisper
+            ? 'Audio recording is not supported in your browser.'
+            : 'Speech recognition is not supported in your browser. Please use Chrome, Edge, or Safari.'}
         </p>
       </div>
     )
@@ -101,33 +149,56 @@ export function VoiceRecorder() {
 
   return (
     <div className="space-y-6">
+      {/* Mode Indicator */}
+      {useWhisper && (
+        <div className="text-center text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full">
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            Using OpenAI Whisper (High Accuracy Mode)
+          </span>
+        </div>
+      )}
+
       {/* Recording Button */}
       <div className="flex justify-center">
         <button
           onClick={handleToggleRecording}
+          disabled={isTranscribing}
           className={cn(
             'relative w-32 h-32 rounded-full flex items-center justify-center',
             'transition-all duration-300 transform hover:scale-105',
             'focus:outline-none focus:ring-4 focus:ring-primary/50',
-            isListening
+            'disabled:opacity-50 disabled:cursor-not-allowed',
+            isRecording
               ? 'bg-destructive text-destructive-foreground animate-pulse-slow shadow-lg shadow-destructive/50'
               : 'bg-primary text-primary-foreground shadow-lg shadow-primary/30'
           )}
-          aria-label={isListening ? 'Stop recording' : 'Start recording'}
+          aria-label={isRecording ? 'Stop recording' : 'Start recording'}
         >
-          {isListening ? <MicOff size={48} /> : <Mic size={48} />}
-          {isListening && (
+          {isTranscribing ? (
+            <Loader2 size={48} className="animate-spin" />
+          ) : isRecording ? (
+            <MicOff size={48} />
+          ) : (
+            <Mic size={48} />
+          )}
+          {isRecording && !isTranscribing && (
             <span className="absolute -bottom-8 text-sm font-medium">
               Recording...
+            </span>
+          )}
+          {isTranscribing && (
+            <span className="absolute -bottom-8 text-sm font-medium">
+              Transcribing...
             </span>
           )}
         </button>
       </div>
 
       {/* Error Message */}
-      {error && (
+      {(currentError || error) && (
         <div className="p-4 bg-destructive/10 text-destructive rounded-lg text-center">
-          {error}
+          {error || currentError}
         </div>
       )}
 
@@ -144,7 +215,7 @@ export function VoiceRecorder() {
           <div className="flex gap-3 justify-center">
             <button
               onClick={handleSave}
-              disabled={isSaving || isListening}
+              disabled={isSaving || isRecording || isTranscribing}
               className={cn(
                 'flex items-center gap-2 px-6 py-3 rounded-lg font-medium',
                 'transition-colors',
@@ -158,7 +229,7 @@ export function VoiceRecorder() {
 
             <button
               onClick={handleDiscard}
-              disabled={isSaving}
+              disabled={isSaving || isTranscribing}
               className={cn(
                 'flex items-center gap-2 px-6 py-3 rounded-lg font-medium',
                 'transition-colors',
