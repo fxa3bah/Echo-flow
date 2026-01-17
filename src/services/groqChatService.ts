@@ -147,12 +147,24 @@ Be conversational, helpful, and always extract actionable items when present.`
   const jsonMatch = response.match(/---JSON---\n([\s\S]*?)\n---END---/)
   let actions: AIInsight['actions'] = []
 
+  const parseAIActionDate = (dateValue?: string) => {
+    if (!dateValue) return undefined
+    if (dateValue.endsWith('Z')) {
+      const trimmed = dateValue.replace('Z', '')
+      const [datePart, timePart = '00:00:00'] = trimmed.split('T')
+      const [year, month, day] = datePart.split('-').map(Number)
+      const [hour = 0, minute = 0, second = 0] = timePart.split(':').map(Number)
+      return new Date(year, (month || 1) - 1, day || 1, hour, minute, second)
+    }
+    return new Date(dateValue)
+  }
+
   if (jsonMatch) {
     try {
       const parsed = JSON.parse(jsonMatch[1])
       actions = parsed.actions.map((action: any) => ({
         ...action,
-        date: action.date ? new Date(action.date) : undefined,
+        date: parseAIActionDate(action.date),
       }))
     } catch (error) {
       console.error('Failed to parse AI actions:', error)
