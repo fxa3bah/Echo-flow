@@ -1,25 +1,50 @@
 # Echo Flow
 
-A fast, intuitive voice-first productivity web application that combines quick voice-to-text journaling, task management, and calendar organization.
+A fast, intuitive voice-first productivity web application that combines quick voice-to-text journaling, task management, and calendar organization with AI-powered insights.
 
-![Echo Flow](https://img.shields.io/badge/version-1.0.0-blue)
+![Echo Flow](https://img.shields.io/badge/version-2.0.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-## ✨ Features
+## 🎉 What's New in v2.0 (Sprint 1)
+
+### ✅ Navigation & Mobile UX
+- **Sticky Navigation**: Header stays visible while scrolling on mobile and desktop
+- **Mobile-Optimized**: 44px minimum touch targets for all buttons
+- **Backdrop Blur**: Modern glass morphism effect on navigation bar
+- **Responsive Spacing**: Adaptive padding that adjusts for mobile/desktop
+
+### 🤝 AI Action Confirmation
+- **Inline Action Cards**: Preview AI-suggested actions before saving
+- **Granular Control**: Accept, Edit, or Reject each action individually
+- **Editable Fields**: Modify title, content, date, and tags before accepting
+- **Accept All**: Quick approve all actions with one click
+- **Visual Feedback**: Rejected actions shown as grayed out
+
+### 📋 Daily View Polish
+- **Collapsible Sections**: Expand/collapse Captured Notes, Tasks, and Daily Notes
+- **Smart Counts**: Shows active vs completed tasks, total notes count
+- **Task Prioritization**: Incomplete tasks shown first with bold text
+- **Completed Tasks**: Shown after active tasks with reduced opacity
+
+## ✨ Core Features
 
 ### 🎙️ Voice Recording
 - **One-tap voice recording** with instant transcription
-- **Dual Mode**: OpenAI Whisper (preferred) or Web Speech API (fallback)
-- **Whisper Mode**: Industry-leading accuracy, 99+ languages, better accent support
-- **Cost**: Only $0.006 per minute with Whisper ($0.60 for 100 minutes)
-- Audio automatically deleted after transcription for privacy
+- **Dual Mode System**:
+  - **Online**: Groq Whisper API (FREE tier: 14,400 seconds/day = 4 hours)
+  - **Offline**: Web Speech API (privacy-friendly, no API needed)
+- **Automatic Fallback**: Switches to offline mode on connection errors
+- **Ultra-Fast**: 0.3s to transcribe 60s of audio with Groq
+- **High Accuracy**: Whisper Large v3 model, 99+ languages
+- **Privacy**: Audio deleted after transcription, offline mode never sends data
 
-### 🤖 AI-Powered Categorization
-- Automatic analysis and categorization of transcriptions
-- Categories: Journal, Todo, Reminder, or Note
-- Smart date detection (e.g., "meeting next Friday")
-- Automatic tagging with relevant keywords
-- Works with local LLM (Ollama) or intelligent fallback rules
+### 🤖 AI Chat & Insights
+- **Natural Conversation**: Chat with AI to capture ideas, tasks, and notes
+- **Automatic Extraction**: AI identifies actionable items from conversation
+- **Action Preview**: Review and edit AI-suggested actions before saving
+- **Voice Input**: Use voice to chat with AI
+- **Context-Aware**: Uses your existing daily data for relevant suggestions
+- **Groq Llama 3.3 70B**: Fast, powerful language model
 
 ### 📝 Transcription Management
 - View all transcriptions in a clean, organized list
@@ -27,40 +52,62 @@ A fast, intuitive voice-first productivity web application that combines quick v
 - Filter by category and tags
 - Timestamps for easy reference
 
-### 📅 Smart Calendar & Daily View
+### 📝 LogSeq-Style Daily Notes
+- **Markdown Editor**: Write notes in markdown with live preview
+- **40+ Slash Commands**: Type `/` for quick formatting:
+  - Basic: `[[page]]`, bold, italic, code, links
+  - Headings: `#` to `######`
+  - Tasks: `- [ ]`, `- [x]`, `- [>]`, `- [?]`
+  - Priority: `[#A]`, `[#B]`, `[#C]`
+  - Dynamic dates and time insertion
+- **Unified Daily View**: See transcriptions, tasks, and notes in one place
+- **Collapsible Sections**: Organize your day with expandable sections
+- **Auto-Save**: Changes saved automatically after 1 second
+- **Preview Mode**: Toggle between edit and formatted view
+
+### 📅 Smart Calendar
 - Interactive calendar with monthly view
-- Daily view showing all entries for selected date
+- Daily view showing all content types (entries, transcriptions, notes)
 - Tasks with checkboxes and completion tracking
-- Visual indicators for days with entries
+- Visual indicators for days with content
+- Quick note creation with optional titles
+- Markdown rendering for diary entries
 
-### 📊 Eisenhower Matrix
-- Organize tasks by urgency and importance
-- Four quadrants: Do First, Schedule, Delegate, Eliminate
-- Drag-and-drop between quadrants
-- Quick priority updates
+### 📊 AI-Powered Eisenhower Matrix
+- **AI Categorization**: Uses Groq Llama 3.3 70B to analyze priority
+- **Intelligent Analysis**: Understands urgency and importance from content
+- **Four Quadrants**: Do First, Schedule, Delegate, Eliminate
+- **Date Filtering**: Today, this week, next 7 days, etc.
+- **Multi-Source**: Analyzes transcriptions, entries, and diary notes
+- **Actionable**: Mark items as complete directly in matrix
 
-### 📖 Rich Text Daily Diary
-- TipTap-powered rich text editor
-- Markdown support
-- Bold, italic, lists, and headers
-- Auto-save functionality
-- Navigate between days easily
+### 💾 Smart Data Management
+- **Cloud Sync**: Auto-sync every 5 minutes to OneDrive/Google Drive/Dropbox
+- **File System Access API**: Choose your sync folder, works offline
+- **Manual Controls**: "Save Now" and "Load Now" buttons
+- **Data Export**: Export all data to JSON with timestamps
+- **Import/Merge**: Import data with deduplication
+- **Local-First**: All data stored in IndexedDB
+
+### 🔄 Smart Deduplication
+- **Duplicate Prevention**: Checks date, type, title, and content
+- **Update Instead of Create**: Modifies existing entries when detected
+- **Tag Merging**: Combines tags from new and existing entries
+- **Diary Content Check**: Avoids duplicate appends to daily notes
 
 ### ⚡ Additional Features
 - **Dark/Light Mode**: System-aware theme with manual toggle
 - **Offline Support**: PWA with service workers
-- **Keyboard Shortcuts**: Power user navigation
-- **Data Export**: Export to JSON or plain text
-- **Responsive Design**: Mobile-first, works on all devices
-- **Accessibility**: Screen reader support and high contrast mode
+- **Keyboard Shortcuts**: Power user navigation (Ctrl+R, Ctrl+D, Ctrl+A, etc.)
+- **Responsive Design**: Mobile-first with sticky navigation
+- **Accessibility**: 44px touch targets, screen reader support
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js 18+ and npm
 - Modern browser (Chrome, Edge, Safari, or Firefox)
-- (Optional but Recommended) OpenAI API key for Whisper transcription
-- (Optional) Ollama with llama3.2 model for enhanced AI features
+- **(Recommended) Groq API key** for AI features (FREE tier available)
 
 ### Installation
 
@@ -75,9 +122,11 @@ cd echo-flow
 npm install
 ```
 
-3. **(Recommended) Set up OpenAI Whisper for high-accuracy transcription:**
+3. **(Recommended) Set up Groq API for AI features:**
 
-   a. Get an API key from [OpenAI Platform](https://platform.openai.com/api-keys)
+   a. Get a FREE API key from [Groq Console](https://console.groq.com/keys)
+      - **FREE Tier**: 14,400 seconds/day transcription + generous chat limits
+      - No credit card required
 
    b. Create a `.env` file in the root directory:
    ```bash
@@ -86,10 +135,12 @@ npm install
 
    c. Add your API key to `.env`:
    ```
-   VITE_OPENAI_API_KEY=sk-your-actual-key-here
+   VITE_GROQ_API_KEY=gsk_your-actual-key-here
    ```
 
-   **Note:** If you skip this step, the app will automatically use the browser's Web Speech API as a fallback.
+   **Note:** If you skip this step:
+   - Transcription will use browser's Web Speech API (offline mode)
+   - AI Chat will not be available
 
 4. Start the development server:
 ```bash
@@ -109,12 +160,12 @@ npm run preview
 
 1. Push your code to GitHub
 2. Go to [vercel.com](https://vercel.com) and import your repository
-3. **Important:** Add your OpenAI API key as an environment variable:
+3. **Important:** Add your Groq API key as an environment variable:
    - Go to Project Settings → Environment Variables
-   - Add: `VITE_OPENAI_API_KEY` = `sk-your-key-here`
+   - Add: `VITE_GROQ_API_KEY` = `gsk-your-key-here`
 4. Deploy!
 
-Your app will automatically use Whisper for transcription once deployed with the API key.
+Your app will use Groq Whisper for transcription and Llama for AI chat once deployed.
 
 ## 🎯 Usage
 
@@ -130,131 +181,140 @@ The AI will automatically:
 - Extract mentioned dates
 - Create calendar entries or tasks as needed
 
+### AI Chat Usage
+1. Navigate to the home screen (Record view)
+2. Scroll down to the AI Chat box
+3. Type or use voice input to describe what you need
+4. Review the AI's response and action suggestions
+5. Click "Accept", "Edit", or "Reject" on each action card
+6. Accepted actions are automatically saved to your daily notes/tasks
+
+Example prompts:
+- "I need to buy groceries tomorrow and call mom on Friday"
+- "Today was amazing! I finished my presentation"
+- "Remind me to review the budget report next Monday"
+
 ### Keyboard Shortcuts
-- `Ctrl + R` - Record view
+- `Ctrl + R` - Record view (home)
+- `Ctrl + D` - Daily Notes
+- `Ctrl + A` - AI Chat (full page)
 - `Ctrl + T` - Transcriptions
 - `Ctrl + C` - Calendar
 - `Ctrl + M` - Eisenhower Matrix
-- `Ctrl + D` - Diary
 - `Ctrl + ,` - Settings
 
-### Using with Ollama (Optional)
+## ⚠️ Troubleshooting
 
-For enhanced AI categorization, install Ollama:
+### Transcription Issues
 
-1. Install Ollama from [ollama.ai](https://ollama.ai)
-2. Pull the llama3.2 model:
-```bash
-ollama pull llama3.2
-```
-3. Ensure Ollama is running (it runs on `localhost:11434` by default)
-4. Echo Flow will automatically detect and use it
+**"Connection Error" or transcription fails:**
 
-Without Ollama, the app uses intelligent rule-based categorization.
+1. **Missing or Invalid Groq API Key**
+   - Ensure you've created a `.env` file with `VITE_GROQ_API_KEY`
+   - API key should start with `gsk_` and not be the placeholder value
+   - Get a free key at [Groq Console](https://console.groq.com/keys)
 
-## ⚠️ Troubleshooting Transcription Issues
+2. **Automatic Fallback**
+   - If Groq fails, the app automatically switches to Web Speech API
+   - Look for "Offline Mode" or WiFi icon in the UI
+   - No action needed - it just works!
 
-### "Connection Error" with OpenAI Whisper
+3. **Network Issues**
+   - Check your internet connection
+   - Verify you can access `https://api.groq.com`
+   - Check if firewalls are blocking the API
 
-If you see a "Transcription Failed: Connection error" message, this is likely due to one of the following:
+### Transcription Modes
 
-**1. Missing or Invalid API Key**
-- Ensure you've created a `.env` file with `VITE_OPENAI_API_KEY`
-- API key should start with `sk-` and not be the placeholder value
-- Verify the key is valid at [OpenAI Platform](https://platform.openai.com/api-keys)
+The app intelligently manages two modes:
 
-**2. CORS Restrictions (Common Issue)**
-
-OpenAI's API has limited support for direct browser calls, which can cause CORS (Cross-Origin Resource Sharing) errors. When this happens, the app will:
-- Show a connection error message
-- Automatically switch to browser-based Web Speech API
-- Display a warning explaining the limitation
-
-**Solutions:**
-- **Recommended**: Use the Web Speech API (works in Chrome, Edge, Safari)
-  - The app automatically falls back to this
-  - Click "Switch to Browser Speech Recognition" in the UI
-  - No API key or costs required
-  - Good accuracy for English and major languages
-
-- **For Production**: Set up a backend proxy
-  - Deploy a simple API endpoint that forwards requests to OpenAI
-  - Update the `whisperService.ts` to call your proxy instead
-  - This avoids CORS issues and keeps your API key secure
-
-**3. Network Connectivity**
-- Check your internet connection
-- Verify you can access `https://api.openai.com`
-- Check if corporate firewalls are blocking the API
-
-### Switching Between Transcription Modes
-
-The app supports two transcription methods:
-
-1. **OpenAI Whisper** (High Accuracy)
-   - Requires API key and costs $0.006/minute
-   - 99+ language support
+1. **Online Mode (Groq Whisper)**
+   - FREE tier: 14,400 seconds/day (4 hours)
+   - 0.3s to transcribe 60s of audio
+   - High accuracy, 99+ languages
    - Better with accents and noisy environments
-   - May fail due to CORS in browser
 
-2. **Web Speech API** (Browser-Based)
-   - Free and built into modern browsers
+2. **Offline Mode (Web Speech API)**
+   - Free and privacy-friendly
+   - Audio never leaves your device
    - Works offline once loaded
-   - Good accuracy for clear speech
-   - Best supported in Chrome/Edge
-   - No CORS issues
+   - Best in Chrome/Edge
+   - Auto-enabled when Groq unavailable
 
-You can manually switch between modes using the toggle button in the voice recorder interface.
+Toggle between modes manually using the mode selector in the voice recorder.
+
+### AI Chat Not Working
+
+- Ensure `VITE_GROQ_API_KEY` is set in your `.env` file
+- Restart the dev server after adding the key: `npm run dev`
+- Check browser console for detailed error messages
+- Verify you haven't exceeded the free tier limits (unlikely)
 
 ## 🏗️ Architecture
 
 ### Tech Stack
 - **Framework**: React 18 with TypeScript
 - **Build Tool**: Vite
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS with custom theming
 - **State Management**: Zustand
 - **Database**: IndexedDB with Dexie.js
-- **Rich Text Editor**: TipTap
-- **Speech-to-Text**: Web Speech API
-- **AI Integration**: Ollama (optional) with fallback logic
+- **Markdown**: Marked with @tailwindcss/typography
+- **Speech-to-Text**: Groq Whisper API + Web Speech API (fallback)
+- **AI Chat**: Groq Llama 3.3 70B Versatile
+- **Icons**: Lucide React
 - **PWA**: Vite PWA Plugin
 
 ### Project Structure
 ```
 src/
-├── components/       # React components
-│   ├── VoiceRecorder.tsx
-│   ├── Navigation.tsx
-│   ├── TranscriptionsList.tsx
-│   ├── CalendarView.tsx
-│   ├── EisenhowerMatrix.tsx
-│   ├── DiaryEditor.tsx
-│   └── SettingsModal.tsx
-├── hooks/           # Custom React hooks
-│   ├── useSpeechRecognition.ts
-│   └── useKeyboardShortcuts.ts
-├── lib/             # Utilities and core logic
-│   ├── db.ts        # Dexie database
-│   ├── utils.ts     # Helper functions
-│   └── export.ts    # Export functionality
-├── services/        # External services
-│   └── aiService.ts # AI categorization
-├── stores/          # Zustand stores
-│   ├── appStore.ts
-│   └── themeStore.ts
-├── types/           # TypeScript types
-│   └── index.ts
-├── App.tsx          # Main app component
-├── main.tsx         # Entry point
-└── index.css        # Global styles
+├── components/              # React components (11 files)
+│   ├── VoiceRecorder.tsx    # Voice recording with dual mode
+│   ├── Navigation.tsx       # Sticky navigation bar
+│   ├── AIChatBox.tsx        # Embedded AI chat
+│   ├── AIInsights.tsx       # Full-page AI chat view
+│   ├── AIActionCard.tsx     # Action preview cards (NEW in v2.0)
+│   ├── TranscriptionsList.tsx  # Transcription management
+│   ├── CalendarView.tsx     # Calendar with markdown rendering
+│   ├── EisenhowerMatrix.tsx # AI-powered priority matrix
+│   ├── DiaryEditor.tsx      # LogSeq-style markdown editor
+│   ├── SlashCommandMenu.tsx # Slash command autocomplete
+│   └── SettingsModal.tsx    # Settings and sync
+├── hooks/                   # Custom React hooks (4 files)
+│   ├── useSpeechRecognition.ts  # Web Speech API wrapper
+│   ├── useAudioRecorder.ts      # Audio recording logic
+│   ├── useAIChat.ts             # AI chat state (NEW in v2.0)
+│   └── useKeyboardShortcuts.ts  # Keyboard navigation
+├── lib/                     # Core utilities
+│   ├── db.ts                # Dexie IndexedDB setup
+│   ├── utils.ts             # Helper functions
+│   └── export.ts            # Export/import functionality
+├── services/                # External service integrations (7 files)
+│   ├── aiService.ts         # Local AI categorization (rule-based)
+│   ├── aiActions.ts         # AI action processing (NEW in v2.0)
+│   ├── groqService.ts       # Groq Whisper transcription
+│   ├── groqChatService.ts   # Groq chat with action extraction
+│   ├── matrixAI.ts          # AI-powered matrix analysis
+│   ├── dataSync.ts          # Cloud sync with File System API
+│   └── whisperService.ts    # Web Speech API fallback
+├── stores/                  # Zustand state stores
+│   ├── appStore.ts          # App-wide state
+│   └── themeStore.ts        # Theme management
+├── types/                   # TypeScript definitions
+│   └── index.ts             # Shared types
+├── App.tsx                  # Main app with sticky nav
+├── main.tsx                 # Entry point
+└── index.css                # Global Tailwind styles
 ```
 
 ## 🔒 Privacy & Security
 
 - **Local-First**: All data stored locally in IndexedDB
-- **No Server**: No data sent to external servers (except Ollama if configured locally)
+- **Offline Mode**: Voice recording works completely offline with Web Speech API
 - **Audio Deletion**: Voice recordings automatically deleted after transcription
-- **Offline Support**: Fully functional without internet connection
+- **No Data Collection**: No analytics, tracking, or data sent to third parties
+- **Optional Cloud**: Groq API only used when explicitly enabled
+- **Sync Control**: You choose where to sync (OneDrive/Google Drive/Dropbox)
+- **Open Source**: Full transparency in code
 
 ## 🛠️ Development
 
@@ -296,11 +356,13 @@ This project is licensed under the MIT License.
 
 ## 🙏 Acknowledgments
 
-- Built with [React](https://react.dev/)
+- Built with [React](https://react.dev/) and [TypeScript](https://www.typescriptlang.org/)
 - UI styled with [Tailwind CSS](https://tailwindcss.com/)
 - Icons from [Lucide](https://lucide.dev/)
-- Rich text editing by [TipTap](https://tiptap.dev/)
-- AI powered by [Ollama](https://ollama.ai/)
+- Markdown rendering by [Marked](https://marked.js.org/)
+- AI powered by [Groq](https://groq.com/) (Whisper + Llama 3.3 70B)
+- Database by [Dexie.js](https://dexie.org/)
+- Inspired by [LogSeq](https://logseq.com/) for note-taking UX
 
 ## 📞 Support
 
