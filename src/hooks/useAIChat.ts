@@ -137,101 +137,23 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
   }
 
   const normalizeActions = (message: string, actions: AIAction[]) => {
-    const lower = message.toLowerCase()
-    const baseDate = extractLocalDate(message)
-    const time = extractTimeFromMessage(message)
-    const next = [...actions]
+    // REMOVED: Manual regex parsing and supplementary action creation
+    // The Groq AI should intelligently parse ALL tasks from the user's message
+    // This function now ONLY enriches what the AI returned (tags, priorities)
 
-    console.log('[normalizeActions] Input actions:', actions)
+    console.log('[normalizeActions] Input actions from AI:', actions)
     console.log('[normalizeActions] Message:', message)
-    console.log('[normalizeActions] Extracted time:', time)
 
-    const hasReply = actions.some((action) => /reply|respond|email/i.test(`${action.title} ${action.content}`))
-    console.log('[normalizeActions] hasReply:', hasReply)
-    console.log('[normalizeActions] Should create reply?', (lower.includes('reply') || lower.includes('email')) && !hasReply)
-
-    if ((lower.includes('reply') || lower.includes('email')) && !hasReply) {
-      // Match variations: "reply to Tyler's email", "reply to tylers email", "reply to Tyler email"
-      // Try multiple patterns to catch different formats
-      let nameMatch = message.match(/reply to\s+([a-zA-Z]+)'s\s+email/i) ||  // "Tyler's email"
-                      message.match(/reply to\s+([a-zA-Z]+)s\s+email/i) ||   // "tylers email"
-                      message.match(/reply to\s+([a-zA-Z]+)\s+email/i)       // "Tyler email"
-      const person = nameMatch ? nameMatch[1].charAt(0).toUpperCase() + nameMatch[1].slice(1).toLowerCase() : 'their'
-      console.log('[normalizeActions] Reply - nameMatch:', nameMatch, 'person:', person)
-      // Match either "on the subject of X" or "about X" or just extract context after "email"
-      const subjectMatch = message.match(/(?:on the subject(?:\s+of)?\s+|about\s+)(.+?)(?:\s+before|\s+by|\s+at|\s+and|$)/i) ||
-        message.match(/email\s+(?:on the subject|about)?\s*(.+?)(?:\s+before|\s+by|\s+at|\s+and|$)/i)
-      const subject = subjectMatch ? subjectMatch[1].trim() : null
-      const replyDate = new Date(baseDate)
-      if (time) {
-        replyDate.setHours(time.hour, time.minute, 0, 0)
-      }
-      const replyTitle = `Reply to ${person}'s email`
-      const replyContent = subject ? `Reply to ${person}'s email about ${subject}` : `Reply to ${person}'s email`
-      console.log('[normalizeActions] Creating reply action:', { replyTitle, replyContent, time, date: time ? replyDate : undefined })
-      next.push({
-        type: 'reminder',
-        title: replyTitle,
-        content: replyContent,
-        date: time ? replyDate : undefined,
-        tags: ['email', person.toLowerCase(), ...(subject ? deriveTags(subject) : [])].slice(0, 3),
-        priority: inferPriority(message, replyTitle, replyContent, !!time),
-      })
-    }
-
-    const hasCall = actions.some((action) => /call/i.test(`${action.title} ${action.content}`))
-    const callMatch = message.match(/call\s+([a-zA-Z]+)/i)
-    if (callMatch && !hasCall) {
-      const person = callMatch[1]
-      const callTitle = `Call ${person}`
-      next.push({
-        type: 'reminder',
-        title: callTitle,
-        content: callTitle,
-        date: undefined,
-        tags: ['call', person.toLowerCase()],
-        priority: inferPriority(message, callTitle, callTitle, false),
-      })
-    }
-
-    const hasWork = actions.some((action) => /work on|contract/i.test(`${action.title} ${action.content}`))
-    const workMatch = message.match(/work on\s+(.+?)(?:\s+and|,|$)/i)
-    if (workMatch && !hasWork) {
-      const task = workMatch[1].trim().replace(/\.$/, '')
-      const workTitle = `Work on ${task}`
-      const workDate = /today/i.test(message) ? baseDate : undefined
-      next.push({
-        type: 'todo',
-        title: workTitle,
-        content: workTitle,
-        date: workDate,
-        tags: deriveTags(task),
-        priority: inferPriority(message, workTitle, workTitle, false),
-      })
-    }
-
-    console.log('[normalizeActions] Actions after supplementary additions:', next)
-
-    return next.map((action) => {
-      const titleContent = `${action.title} ${action.content}`
+    // Only enrich the actions the AI returned - no manual parsing
+    return actions.map((action) => {
       let updatedAction = { ...action }
 
-      // Apply date if missing
-      if (!action.date && time && /reply|respond|email/i.test(titleContent)) {
-        const dated = new Date(baseDate)
-        dated.setHours(time.hour, time.minute, 0, 0)
-        updatedAction.date = dated
-      } else if (!action.date && /today/i.test(message) && !/reply|respond|email/i.test(titleContent)) {
-        const dated = new Date(baseDate)
-        dated.setHours(9, 0, 0, 0)
-        updatedAction.date = dated
-      }
-
-      // Infer priority if missing
+      // Infer priority if missing (AI should set this, but fallback just in case)
       if (!updatedAction.priority) {
-        updatedAction.priority = inferPriority(message, action.title, action.content, !!updatedAction.date)
+        updatedAction.priority = inferPriority(message, action.title, action.content, !!action.date)
       }
 
+      // Ensure tags are present
       return ensureTags(updatedAction)
     })
   }
