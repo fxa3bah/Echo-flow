@@ -27,14 +27,15 @@ export function Navigation({ currentView, onViewChange, onOpenSettings }: Naviga
   ]
 
   return (
-    <nav className="flex items-center gap-1">
+    <nav className="flex items-center gap-1 md:gap-2">
       {navItems.map((item) => (
         <button
           key={item.id}
           onClick={() => onViewChange(item.id)}
           className={cn(
-            'flex items-center gap-2 px-3 py-2 rounded-lg transition-colors',
+            'flex items-center gap-2 px-2 py-2 md:px-3 md:py-2 rounded-lg transition-colors',
             'hover:bg-accent hover:text-accent-foreground',
+            'min-h-[44px] min-w-[44px]', // Minimum touch target size
             currentView === item.id
               ? 'bg-primary text-primary-foreground'
               : 'text-muted-foreground'
@@ -51,7 +52,7 @@ export function Navigation({ currentView, onViewChange, onOpenSettings }: Naviga
 
       <button
         onClick={toggleTheme}
-        className="ml-2 p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
+        className="ml-1 md:ml-2 p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors min-h-[44px] min-w-[44px]"
         aria-label="Toggle theme"
         title="Toggle theme"
       >
@@ -60,7 +61,7 @@ export function Navigation({ currentView, onViewChange, onOpenSettings }: Naviga
 
       <button
         onClick={onOpenSettings}
-        className="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
+        className="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors min-h-[44px] min-w-[44px]"
         aria-label="Settings"
         title="Settings (Ctrl+,)"
       >

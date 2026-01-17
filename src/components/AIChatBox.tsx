@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { Send, Loader2, Sparkles, CheckCircle2, Mic, MicOff } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useAIChat } from '../hooks/useAIChat'
+import { AIActionCard } from './AIActionCard'
 
 export function AIChatBox() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -14,6 +15,9 @@ export function AIChatBox() {
     isListening,
     handleVoiceToggle,
     handleSend,
+    handleAcceptAction,
+    handleRejectAction,
+    handleAcceptAll,
     messagesEndRef,
     speechRecognition,
   } = useAIChat({
@@ -40,23 +44,42 @@ export function AIChatBox() {
         )}
       </div>
 
-      <div className="bg-muted/30 rounded-lg p-3 max-h-64 overflow-y-auto space-y-3">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={cn(
-              'rounded-lg p-2 text-sm',
-              message.role === 'user' ? 'bg-primary text-primary-foreground ml-6' : 'bg-card border border-border mr-6'
-            )}
-          >
-            <p className="whitespace-pre-wrap">{message.content}</p>
-            {message.actions && message.actions.length > 0 && (
-              <div className="mt-2 pt-2 border-t border-border text-xs text-muted-foreground space-y-1">
-                {message.actions.map((action, i) => (
-                  <div key={i} className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" />
-                    Added {action.type}: {action.title}
-                  </div>
+      <div className="bg-muted/30 rounded-lg p-3 max-h-96 overflow-y-auto space-y-3">
+        {messages.map((message, messageIndex) => (
+          <div key={messageIndex} className="space-y-2">
+            <div
+              className={cn(
+                'rounded-lg p-2 text-sm',
+                message.role === 'user' ? 'bg-primary text-primary-foreground ml-6' : 'bg-card border border-border mr-6'
+              )}
+            >
+              <p className="whitespace-pre-wrap">{message.content}</p>
+            </div>
+
+            {/* Pending Actions - Show action cards for user to confirm */}
+            {message.pendingActions && message.pendingActions.length > 0 && (
+              <div className="space-y-2 mr-6">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {message.pendingActions.filter((_, i) => !message.rejectedActionIndices?.includes(i)).length} action(s) to review
+                  </span>
+                  {message.pendingActions.filter((_, i) => !message.rejectedActionIndices?.includes(i)).length > 1 && (
+                    <button
+                      onClick={() => handleAcceptAll(messageIndex)}
+                      className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                    >
+                      Accept All
+                    </button>
+                  )}
+                </div>
+                {message.pendingActions.map((action, actionIndex) => (
+                  <AIActionCard
+                    key={actionIndex}
+                    action={action}
+                    onAccept={(editedAction) => handleAcceptAction(messageIndex, actionIndex, editedAction)}
+                    onReject={() => handleRejectAction(messageIndex, actionIndex)}
+                    isRejected={message.rejectedActionIndices?.includes(actionIndex)}
+                  />
                 ))}
               </div>
             )}

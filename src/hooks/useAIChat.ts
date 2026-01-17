@@ -7,6 +7,8 @@ export interface AIChatMessage {
   role: 'user' | 'assistant'
   content: string
   actions?: any[]
+  pendingActions?: any[]
+  rejectedActionIndices?: number[]
 }
 
 interface UseAIChatOptions {
@@ -65,33 +67,24 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
       const contextSummary = await buildAIContextSummary()
       const insight = await getAIInsights(userMessage, conversationHistory, contextSummary)
 
+      // Store actions as pending instead of auto-applying
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
           content: insight.response,
-          actions: insight.actions,
+          pendingActions: insight.actions.length > 0 ? insight.actions : undefined,
+          rejectedActionIndices: [],
         },
       ])
 
+      // Auto-append chat to diary only if no note/journal actions
       const noteActionExists = insight.actions.some(
         (action) => action.type === 'note' || action.type === 'journal'
       )
 
-      const actionResult = await applyAIActions(insight.actions, new Date())
-
-      const appendedFromChat = !noteActionExists
-        ? await appendToDiaryEntry(new Date(), `### AI Chat\n${userMessage}`)
-        : false
-
-      const createdCount = actionResult.created +
-        actionResult.updated +
-        (actionResult.diaryUpdated ? 1 : 0) +
-        (appendedFromChat ? 1 : 0)
-
-      if (createdCount > 0) {
-        setActionsCreated(createdCount)
-        setTimeout(() => setActionsCreated(0), 3000)
+      if (!noteActionExists) {
+        await appendToDiaryEntry(new Date(), `### AI Chat\n${userMessage}`)
       }
     } catch (error: any) {
       setMessages((prev) => [
@@ -106,6 +99,82 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     }
   }
 
+  const handleAcceptAction = async (messageIndex: number, actionIndex: number, action: any) => {
+    try {
+      // Apply the action to the database
+      const actionResult = await applyAIActions([action], new Date())
+
+      const createdCount = actionResult.created + actionResult.updated + (actionResult.diaryUpdated ? 1 : 0)
+
+      if (createdCount > 0) {
+        setActionsCreated(createdCount)
+        setTimeout(() => setActionsCreated(0), 3000)
+      }
+
+      // Remove from pending actions
+      setMessages((prev) =>
+        prev.map((msg, idx) => {
+          if (idx === messageIndex && msg.pendingActions) {
+            const newPending = msg.pendingActions.filter((_, i) => i !== actionIndex)
+            return {
+              ...msg,
+              pendingActions: newPending.length > 0 ? newPending : undefined,
+            }
+          }
+          return msg
+        })
+      )
+    } catch (error) {
+      console.error('Failed to accept action:', error)
+    }
+  }
+
+  const handleRejectAction = (messageIndex: number, actionIndex: number) => {
+    setMessages((prev) =>
+      prev.map((msg, idx) => {
+        if (idx === messageIndex) {
+          return {
+            ...msg,
+            rejectedActionIndices: [...(msg.rejectedActionIndices || []), actionIndex],
+          }
+        }
+        return msg
+      })
+    )
+  }
+
+  const handleAcceptAll = async (messageIndex: number) => {
+    const message = messages[messageIndex]
+    if (!message?.pendingActions) return
+
+    try {
+      // Apply all pending actions
+      const actionResult = await applyAIActions(message.pendingActions, new Date())
+
+      const createdCount = actionResult.created + actionResult.updated + (actionResult.diaryUpdated ? 1 : 0)
+
+      if (createdCount > 0) {
+        setActionsCreated(createdCount)
+        setTimeout(() => setActionsCreated(0), 3000)
+      }
+
+      // Clear pending actions
+      setMessages((prev) =>
+        prev.map((msg, idx) => {
+          if (idx === messageIndex) {
+            return {
+              ...msg,
+              pendingActions: undefined,
+            }
+          }
+          return msg
+        })
+      )
+    } catch (error) {
+      console.error('Failed to accept all actions:', error)
+    }
+  }
+
   return {
     messages,
     input,
@@ -115,6 +184,9 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     isListening,
     handleVoiceToggle,
     handleSend,
+    handleAcceptAction,
+    handleRejectAction,
+    handleAcceptAll,
     messagesEndRef,
     speechRecognition,
   }
