@@ -187,6 +187,53 @@ export function VoiceRecorder() {
 
   return (
     <div className="space-y-6">
+      {/* Transcription Mode Toggle */}
+      {speechRecognition.isSupported && (
+        <div className="flex items-center justify-center gap-4 p-4 bg-muted/50 rounded-lg">
+          <span className="text-sm font-medium text-muted-foreground">
+            Transcription Mode:
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setUseWhisper(false)
+                setSetupWarning(null)
+                setError(null)
+              }}
+              disabled={isRecording}
+              className={cn(
+                'px-4 py-2 rounded-lg font-medium transition-all text-sm',
+                !useWhisper
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+                isRecording && 'opacity-50 cursor-not-allowed'
+              )}
+            >
+              Browser
+            </button>
+            {whisperConfigured && (
+              <button
+                onClick={() => {
+                  setUseWhisper(true)
+                  setSetupWarning(null)
+                  setError(null)
+                }}
+                disabled={isRecording}
+                className={cn(
+                  'px-4 py-2 rounded-lg font-medium transition-all text-sm',
+                  useWhisper
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+                  isRecording && 'opacity-50 cursor-not-allowed'
+                )}
+              >
+                OpenAI Whisper
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Setup Warning */}
       {setupWarning && (
         <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-start gap-2 text-sm">
@@ -194,33 +241,6 @@ export function VoiceRecorder() {
           <p className="text-yellow-800 dark:text-yellow-200">{setupWarning}</p>
         </div>
       )}
-
-      {/* Mode Indicator and Toggle */}
-      <div className="text-center text-sm text-muted-foreground space-y-2">
-        {useWhisper ? (
-          <span className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full">
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            Using OpenAI Whisper (High Accuracy Mode)
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-2 px-3 py-1 bg-secondary/50 rounded-full">
-            <span className="w-2 h-2 bg-blue-500 rounded-full" />
-            Using Browser Speech Recognition
-          </span>
-        )}
-        {whisperConfigured && speechRecognition.isSupported && !isRecording && (
-          <button
-            onClick={() => {
-              setUseWhisper(!useWhisper)
-              setSetupWarning(null)
-              setError(null)
-            }}
-            className="text-xs text-primary hover:underline"
-          >
-            Switch to {useWhisper ? 'Browser Speech Recognition' : 'OpenAI Whisper'}
-          </button>
-        )}
-      </div>
 
       {/* Recording Button */}
       <div className="flex justify-center">

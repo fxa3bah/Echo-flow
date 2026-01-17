@@ -81,43 +81,63 @@ Respond ONLY with valid JSON, no additional text.`
     let category: EntryCategory = 'note'
     let priority: Priority | undefined
 
-    if (
-      lowerText.includes('todo') ||
-      lowerText.includes('task') ||
-      lowerText.includes('need to') ||
-      lowerText.includes('have to') ||
-      lowerText.includes('must')
-    ) {
+    // TODO detection - more comprehensive
+    const todoIndicators = [
+      'todo', 'task', 'need to', 'have to', 'must', 'should',
+      'going to', 'plan to', 'want to', 'will',
+      'remember to', 'make sure', 'check', 'call', 'email',
+      'buy', 'get', 'pick up', 'finish', 'complete', 'start',
+      'schedule', 'book', 'arrange', 'prepare', 'organize'
+    ]
+
+    const hasTodoIndicator = todoIndicators.some(indicator => lowerText.includes(indicator))
+
+    // REMINDER detection
+    const reminderIndicators = [
+      'remind', 'reminder', 'don\'t forget', 'remember',
+      'important to', 'note to self', 'heads up'
+    ]
+
+    const hasReminderIndicator = reminderIndicators.some(indicator => lowerText.includes(indicator))
+
+    // JOURNAL detection
+    const journalIndicators = [
+      'feeling', 'felt', 'thought', 'thinking', 'today i',
+      'dear diary', 'grateful', 'thankful', 'happy', 'sad',
+      'excited', 'worried', 'noticed', 'realized'
+    ]
+
+    const hasJournalIndicator = journalIndicators.some(indicator => lowerText.includes(indicator))
+
+    // Categorize based on strongest indicators
+    if (hasReminderIndicator) {
+      category = 'reminder'
+    } else if (hasTodoIndicator) {
       category = 'todo'
 
       // Determine priority for todos
-      const isUrgent = lowerText.includes('urgent') || lowerText.includes('asap') || lowerText.includes('immediately')
-      const isImportant = lowerText.includes('important') || lowerText.includes('critical') || lowerText.includes('crucial')
+      const urgentKeywords = ['urgent', 'asap', 'immediately', 'now', 'today', 'emergency', 'critical']
+      const importantKeywords = ['important', 'crucial', 'essential', 'vital', 'key', 'priority', 'must']
+
+      const isUrgent = urgentKeywords.some(keyword => lowerText.includes(keyword))
+      const isImportant = importantKeywords.some(keyword => lowerText.includes(keyword))
 
       if (isUrgent && isImportant) priority = 'urgent-important'
       else if (!isUrgent && isImportant) priority = 'not-urgent-important'
       else if (isUrgent && !isImportant) priority = 'urgent-not-important'
       else priority = 'not-urgent-not-important'
-    } else if (
-      lowerText.includes('remind') ||
-      lowerText.includes('reminder') ||
-      lowerText.includes('don\'t forget')
-    ) {
-      category = 'reminder'
-    } else if (
-      lowerText.includes('today') ||
-      lowerText.includes('feeling') ||
-      lowerText.includes('thought') ||
-      lowerText.includes('dear diary')
-    ) {
+    } else if (hasJournalIndicator) {
       category = 'journal'
     }
 
     // Extract tags
     const tags: string[] = []
     const tagKeywords = [
-      'work', 'personal', 'health', 'fitness', 'finance', 'family',
-      'project', 'meeting', 'shopping', 'urgent', 'important'
+      'work', 'personal', 'health', 'fitness', 'exercise', 'workout',
+      'finance', 'money', 'budget', 'family', 'friends', 'social',
+      'project', 'meeting', 'appointment', 'shopping', 'groceries',
+      'urgent', 'important', 'study', 'learning', 'reading',
+      'home', 'chores', 'cleaning', 'cooking', 'travel', 'vacation'
     ]
 
     for (const keyword of tagKeywords) {
@@ -126,25 +146,56 @@ Respond ONLY with valid JSON, no additional text.`
       }
     }
 
-    // Extract date mentions
+    // Extract date mentions - check for any date-related text
     let suggestedDate: Date | undefined
     const datePatterns = [
+      /today/i,
       /tomorrow/i,
+      /day after tomorrow/i,
       /next week/i,
+      /this week/i,
       /next month/i,
+      /this month/i,
+      /weekend/i,
       /monday|tuesday|wednesday|thursday|friday|saturday|sunday/i,
+      /in \d+ days?/i,
+      /\d{1,2}[\/\-]\d{1,2}/,
     ]
 
     for (const pattern of datePatterns) {
-      if (pattern.test(text)) {
+      if (pattern.test(lowerText)) {
         suggestedDate = this.extractDate(text)
         break
       }
     }
 
-    // Generate title
+    // If no date found but it's a todo/reminder, default to tomorrow
+    if (!suggestedDate && (category === 'todo' || category === 'reminder')) {
+      // Check if it doesn't explicitly say "someday" or similar vague terms
+      const vagueTerms = ['someday', 'eventually', 'sometime', 'later']
+      const hasVagueTerm = vagueTerms.some(term => lowerText.includes(term))
+
+      if (!hasVagueTerm) {
+        const tomorrow = new Date()
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        tomorrow.setHours(0, 0, 0, 0)
+        suggestedDate = tomorrow
+      }
+    }
+
+    // Generate title - clean and concise
     const words = text.split(' ').slice(0, 8)
-    const suggestedTitle = words.join(' ') + (text.split(' ').length > 8 ? '...' : '')
+    let suggestedTitle = words.join(' ') + (text.split(' ').length > 8 ? '...' : '')
+
+    // Remove common prefixes for cleaner titles
+    const prefixesToRemove = ['todo ', 'task ', 'remind me to ', 'reminder ', 'i need to ', 'i have to ', 'i must ', 'i should ', 'i want to ', 'i will ']
+    for (const prefix of prefixesToRemove) {
+      if (suggestedTitle.toLowerCase().startsWith(prefix)) {
+        suggestedTitle = suggestedTitle.substring(prefix.length)
+        suggestedTitle = suggestedTitle.charAt(0).toUpperCase() + suggestedTitle.slice(1)
+        break
+      }
+    }
 
     return {
       category,
@@ -152,7 +203,7 @@ Respond ONLY with valid JSON, no additional text.`
       priority,
       suggestedDate,
       suggestedTitle,
-      confidence: 0.6,
+      confidence: 0.7,
     }
   }
 
@@ -160,29 +211,97 @@ Respond ONLY with valid JSON, no additional text.`
     const now = new Date()
     const lowerText = text.toLowerCase()
 
+    // Today
+    if (lowerText.includes('today')) {
+      return new Date(now)
+    }
+
+    // Tomorrow
     if (lowerText.includes('tomorrow')) {
       const tomorrow = new Date(now)
       tomorrow.setDate(tomorrow.getDate() + 1)
+      tomorrow.setHours(0, 0, 0, 0)
       return tomorrow
     }
 
+    // Day after tomorrow
+    if (lowerText.includes('day after tomorrow') || lowerText.includes('overmorrow')) {
+      const dayAfter = new Date(now)
+      dayAfter.setDate(dayAfter.getDate() + 2)
+      dayAfter.setHours(0, 0, 0, 0)
+      return dayAfter
+    }
+
+    // Next week
     if (lowerText.includes('next week')) {
       const nextWeek = new Date(now)
       nextWeek.setDate(nextWeek.getDate() + 7)
+      nextWeek.setHours(0, 0, 0, 0)
       return nextWeek
     }
 
+    // Next month
+    if (lowerText.includes('next month')) {
+      const nextMonth = new Date(now)
+      nextMonth.setMonth(nextMonth.getMonth() + 1)
+      nextMonth.setHours(0, 0, 0, 0)
+      return nextMonth
+    }
+
+    // This weekend
+    if (lowerText.includes('this weekend') || lowerText.includes('weekend')) {
+      const saturday = new Date(now)
+      const daysUntilSaturday = 6 - now.getDay()
+      saturday.setDate(saturday.getDate() + (daysUntilSaturday <= 0 ? 7 + daysUntilSaturday : daysUntilSaturday))
+      saturday.setHours(0, 0, 0, 0)
+      return saturday
+    }
+
+    // Day names (next occurrence)
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
     for (let i = 0; i < days.length; i++) {
       if (lowerText.includes(days[i])) {
+        // Check if it's "next [day]"
+        const isNext = lowerText.includes(`next ${days[i]}`)
         const targetDay = i
         const currentDay = now.getDay()
         let daysToAdd = targetDay - currentDay
-        if (daysToAdd <= 0) daysToAdd += 7
+
+        if (daysToAdd <= 0 || isNext) {
+          daysToAdd += 7
+        }
+
         const targetDate = new Date(now)
         targetDate.setDate(targetDate.getDate() + daysToAdd)
+        targetDate.setHours(0, 0, 0, 0)
         return targetDate
       }
+    }
+
+    // In X days
+    const inDaysMatch = lowerText.match(/in (\d+) days?/)
+    if (inDaysMatch) {
+      const days = parseInt(inDaysMatch[1])
+      const targetDate = new Date(now)
+      targetDate.setDate(targetDate.getDate() + days)
+      targetDate.setHours(0, 0, 0, 0)
+      return targetDate
+    }
+
+    // Specific date formats (MM/DD, MM-DD, etc.)
+    const dateMatch = lowerText.match(/(\d{1,2})[\/\-](\d{1,2})/)
+    if (dateMatch) {
+      const month = parseInt(dateMatch[1]) - 1 // 0-indexed
+      const day = parseInt(dateMatch[2])
+      const targetDate = new Date(now.getFullYear(), month, day)
+      targetDate.setHours(0, 0, 0, 0)
+
+      // If the date has passed this year, assume next year
+      if (targetDate < now) {
+        targetDate.setFullYear(targetDate.getFullYear() + 1)
+      }
+
+      return targetDate
     }
 
     return undefined
