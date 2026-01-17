@@ -5,7 +5,7 @@ import { cn } from '../lib/utils'
 import type { Priority } from '../types'
 import { analyzeAllDataForMatrix } from '../services/matrixAI'
 
-type DateFilter = 'today' | 'last-3-days' | 'this-week' | 'last-week' | 'last-month' | 'future' | 'all'
+type DateFilter = 'today' | 'last-3-days' | 'this-week' | 'last-week' | 'last-month' | 'future' | 'next-7-days' | 'all'
 
 interface AnalyzedItem {
   id: string
@@ -56,6 +56,7 @@ const dateFilterOptions: { value: DateFilter; label: string }[] = [
   { value: 'this-week', label: 'This Week' },
   { value: 'last-week', label: 'Last Week' },
   { value: 'last-month', label: 'Last Month' },
+  { value: 'next-7-days', label: 'Next 7 Days' },
   { value: 'future', label: 'Future' },
 ]
 
@@ -127,6 +128,12 @@ export function EisenhowerMatrix() {
         case 'future':
           return itemDay > today
 
+        case 'next-7-days': {
+          const nextWeek = new Date(today)
+          nextWeek.setDate(today.getDate() + 7)
+          return itemDay >= today && itemDay <= nextWeek
+        }
+
         default:
           return true
       }
@@ -152,14 +159,13 @@ export function EisenhowerMatrix() {
   const formatItemDate = (date: Date): string => {
     const now = new Date()
     const itemDate = new Date(date)
-    const diffTime = now.getTime() - itemDate.getTime()
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+    const diffTime = itemDate.getTime() - now.getTime()
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
+    const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
 
-    if (diffDays === 0) return 'Today'
-    if (diffDays === 1) return 'Yesterday'
-    if (diffDays === -1) return 'Tomorrow'
-    if (diffDays > 0 && diffDays < 7) return `${diffDays} days ago`
-    if (diffDays < 0 && diffDays > -7) return `In ${Math.abs(diffDays)} days`
+    if (Math.abs(diffDays) <= 6) {
+      return rtf.format(diffDays, 'day')
+    }
 
     return itemDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   }
@@ -314,7 +320,7 @@ export function EisenhowerMatrix() {
                                     key={tag}
                                     className="px-1.5 py-0.5 bg-secondary text-secondary-foreground rounded text-xs"
                                   >
-                                    {tag}
+                                    #{tag}
                                   </span>
                                 ))}
                               </div>

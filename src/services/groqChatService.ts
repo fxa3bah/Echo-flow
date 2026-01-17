@@ -54,14 +54,19 @@ export async function chatWithGroq(messages: ChatMessage[]): Promise<string> {
   }
 }
 
-export async function getAIInsights(userMessage: string, conversationHistory: ChatMessage[] = []): Promise<AIInsight> {
+export async function getAIInsights(
+  userMessage: string,
+  conversationHistory: ChatMessage[] = [],
+  contextSummary = ''
+): Promise<AIInsight> {
   const systemPrompt: ChatMessage = {
     role: 'system',
     content: `You are an AI assistant for Echo Flow, a productivity app. Your job is to:
 1. Have a natural conversation with the user
 2. Extract actionable items (todos, reminders, notes, journal entries) from the conversation
 3. Respond in a friendly, helpful manner
-4. When you identify actionable items, format them as JSON at the end of your response
+4. Use the provided app context to avoid duplicates and update existing items when appropriate
+5. When you identify actionable items, format them as JSON at the end of your response
 
 Response format:
 [Your natural response to the user]
@@ -117,6 +122,9 @@ Be conversational, helpful, and always extract actionable items when present.`
 
   const messages: ChatMessage[] = [
     systemPrompt,
+    ...(contextSummary
+      ? [{ role: 'system' as const, content: `App context:\n${contextSummary}` }]
+      : []),
     ...conversationHistory,
     { role: 'user', content: userMessage }
   ]
