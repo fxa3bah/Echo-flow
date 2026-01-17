@@ -56,18 +56,19 @@ export function DiaryEditor() {
     if (diaryEntry) {
       // Check if content contains HTML tags (from old rich text editor)
       const hasHtmlTags = /<[^>]+>/.test(diaryEntry.content)
-      if (hasHtmlTags) {
-        // Strip HTML and convert to plain text
-        const plainText = stripHtml(diaryEntry.content)
-        setContent(plainText)
+      const rawContent = hasHtmlTags ? stripHtml(diaryEntry.content) : diaryEntry.content
+      const cleanedContent = rawContent
+        .split('\n')
+        .filter((line) => !line.trim().startsWith('### AI Actions'))
+        .join('\n')
 
-        // Update the database to save cleaned version
+      setContent(cleanedContent)
+
+      if (cleanedContent !== diaryEntry.content) {
         db.diaryEntries.update(diaryEntry.id, {
-          content: plainText,
+          content: cleanedContent,
           updatedAt: new Date(),
         }).catch(console.error)
-      } else {
-        setContent(diaryEntry.content)
       }
     } else {
       setContent('')
