@@ -1,6 +1,6 @@
 import { db } from '../lib/db'
 import { startOfDay, endOfDay } from '../lib/utils'
-import type { Priority, EntryCategory } from '../types'
+import type { Priority, EntryType } from '../types'
 
 export interface AIAction {
   type: 'todo' | 'reminder' | 'note' | 'journal'
@@ -36,9 +36,11 @@ export async function appendToDiaryEntry(date: Date, text: string): Promise<bool
   const trimmed = normalizeContent(text)
   if (!trimmed) return false
 
-  const existing = await db.diaryEntries
+  // Find existing diary entry for this date
+  const existing = await db.entries
     .where('date')
     .between(startOfDay(date), endOfDay(date), true, true)
+    .filter((entry) => entry.type === 'diary' && entry.source === 'diary')
     .first()
 
   if (existing) {
@@ -46,24 +48,31 @@ export async function appendToDiaryEntry(date: Date, text: string): Promise<bool
       return false
     }
 
-    await db.diaryEntries.update(existing.id, {
+    await db.entries.update(existing.id, {
       content: `${existing.content.trim()}\n\n${trimmed}`,
       updatedAt: new Date(),
     })
     return true
   }
 
-  await db.diaryEntries.add({
+  // Create new diary entry
+  await db.entries.add({
     id: crypto.randomUUID(),
-    date,
+    type: 'diary',
+    source: 'diary',
     content: trimmed,
+    title: `Daily Notes - ${date.toLocaleDateString()}`,
+    date,
     createdAt: new Date(),
     updatedAt: new Date(),
+    tags: [],
+    completed: false,
+    processed: true,
   })
   return true
 }
 
-const findExistingEntry = async (date: Date, type: EntryCategory, title: string, content: string) => {
+const findExistingEntry = async (date: Date, type: EntryType, title: string, content: string) => {
   const start = startOfDay(date)
   const end = endOfDay(date)
   const normalizedTitle = title.trim().toLowerCase()
@@ -74,7 +83,7 @@ const findExistingEntry = async (date: Date, type: EntryCategory, title: string,
     .between(start, end, true, true)
     .filter((entry) =>
       entry.type === type &&
-      (entry.title.trim().toLowerCase() === normalizedTitle ||
+      ((entry.title && entry.title.trim().toLowerCase() === normalizedTitle) ||
         entry.content.trim().toLowerCase() === normalizedContent)
     )
     .first()
@@ -92,7 +101,7 @@ export async function applyAIActions(actions: AIAction[], fallbackDate = new Dat
     const normalizedTitle = action.title?.trim() || normalizedContent.slice(0, 50)
 
     if (action.type === 'todo' || action.type === 'reminder') {
-      const entryType = action.type as EntryCategory
+      const entryType = action.type as EntryType
       const existing = await findExistingEntry(actionDate, entryType, normalizedTitle, normalizedContent)
 
       if (existing) {
@@ -117,6 +126,7 @@ export async function applyAIActions(actions: AIAction[], fallbackDate = new Dat
         await db.entries.add({
           id: crypto.randomUUID(),
           type: entryType,
+          source: 'ai-chat',
           title: normalizedTitle,
           content: normalizedContent,
           date: actionDate,
@@ -125,7 +135,7 @@ export async function applyAIActions(actions: AIAction[], fallbackDate = new Dat
           tags: normalizedTags,
           priority,
           completed: false,
-          linkedEntryIds: [],
+          processed: true,
         })
         created += 1
       }
@@ -145,23 +155,23 @@ export async function buildAIContextSummary(date = new Date()): Promise<string> 
   const start = startOfDay(date)
   const end = endOfDay(date)
 
-  const [entries, transcriptions, diaryEntry] = await Promise.all([
-    db.entries.where('date').between(start, end, true, true).toArray(),
-    db.transcriptions.where('createdAt').between(start, end, true, true).toArray(),
-    db.diaryEntries.where('date').between(start, end, true, true).first(),
-  ])
+  // Simple! Just query unified table
+  const entries = await db.entries
+    .where('date')
+    .between(start, end, true, true)
+    .toArray()
 
-  const entryLines = entries.map((entry) =>
-    `- [${entry.type}] ${entry.title}: ${entry.content}`
-  )
-  const transcriptionLines = transcriptions.map((item) =>
-    `- [transcription] ${item.text}`
-  )
+  if (entries.length === 0) {
+    return 'Today\'s context: No entries yet'
+  }
+
+  const entryLines = entries.map((entry) => {
+    const title = entry.title || entry.content.slice(0, 50)
+    return `- [${entry.type}] ${title}: ${entry.content.slice(0, 100)}`
+  })
 
   return [
     'Today\'s context:',
-    entryLines.length ? 'Entries:\n' + entryLines.join('\n') : 'Entries: none',
-    transcriptionLines.length ? 'Transcriptions:\n' + transcriptionLines.join('\n') : 'Transcriptions: none',
-    diaryEntry?.content ? `Daily Notes:\n${diaryEntry.content}` : 'Daily Notes: none',
+    entryLines.join('\n'),
   ].join('\n')
 }

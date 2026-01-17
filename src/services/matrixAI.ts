@@ -20,65 +20,20 @@ export async function analyzeAllDataForMatrix(): Promise<AnalyzedItem[]> {
     throw new Error('Groq API key not found. Please add VITE_GROQ_API_KEY to your environment variables.')
   }
 
-  // Fetch all data from the database
-  const [transcriptions, entries, diaryEntries] = await Promise.all([
-    db.transcriptions.toArray(),
-    db.entries.toArray(),
-    db.diaryEntries.toArray(),
-  ])
+  // Simple! Just fetch from unified table
+  const entries = await db.entries.toArray()
 
-  // Combine all data into a single array for analysis
-  const allItems: AnalyzedItem[] = []
-
-  // Add transcriptions
-  for (const t of transcriptions) {
-    allItems.push({
-      id: t.id,
-      title: t.text.substring(0, 50) + (t.text.length > 50 ? '...' : ''),
-      content: t.text,
-      date: t.createdAt,
-      priority: 'not-urgent-not-important', // Default, will be updated by AI
-      tags: t.tags || [],
-      source: 'transcription',
-    })
-  }
-
-  // Add entries (todos, reminders, notes)
-  for (const e of entries) {
-    allItems.push({
-      id: e.id,
-      title: e.title,
-      content: e.content,
-      date: e.date,
-      priority: e.priority || 'not-urgent-not-important',
-      tags: e.tags || [],
-      source: 'entry',
-      completed: e.completed,
-    })
-  }
-
-  // Add diary entries
-  for (const d of diaryEntries) {
-    // Extract tasks/actions from diary entries
-    const lines = d.content.split('\n').filter(line =>
-      line.includes('TODO') ||
-      line.includes('- [ ]') ||
-      line.includes('- [x]') ||
-      line.match(/\b(call|email|meet|finish|complete|deadline|urgent)\b/i)
-    )
-
-    if (lines.length > 0) {
-      allItems.push({
-        id: d.id,
-        title: lines[0].substring(0, 50) + (lines[0].length > 50 ? '...' : ''),
-        content: lines.join('\n'),
-        date: d.date,
-        priority: 'not-urgent-not-important', // Default, will be updated by AI
-        tags: [],
-        source: 'diary',
-      })
-    }
-  }
+  // Map to analyzed items
+  const allItems: AnalyzedItem[] = entries.map((e) => ({
+    id: e.id,
+    title: e.title || e.content.substring(0, 50) + (e.content.length > 50 ? '...' : ''),
+    content: e.content,
+    date: e.date,
+    priority: e.priority || 'not-urgent-not-important',
+    tags: e.tags || [],
+    source: e.source === 'voice' ? 'transcription' : e.source === 'diary' ? 'diary' : 'entry',
+    completed: e.completed,
+  }))
 
   // If no items, return empty array
   if (allItems.length === 0) {

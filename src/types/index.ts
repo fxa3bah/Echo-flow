@@ -1,5 +1,5 @@
-export type EntryCategory = 'journal' | 'todo' | 'reminder' | 'note'
-
+export type EntryType = 'voice' | 'todo' | 'reminder' | 'note' | 'journal' | 'diary'
+export type EntrySource = 'voice' | 'ai-chat' | 'manual' | 'diary'
 export type Priority = 'urgent-important' | 'not-urgent-important' | 'urgent-not-important' | 'not-urgent-not-important'
 
 export interface Tag {
@@ -7,6 +7,31 @@ export interface Tag {
   name: string
   color?: string
 }
+
+// UNIFIED ENTRY - Single source of truth for all data
+export interface Entry {
+  id: string
+  type: EntryType
+  source: EntrySource
+  content: string
+  title?: string
+  date: Date
+  createdAt: Date
+  updatedAt: Date
+  tags: string[]
+  priority?: Priority
+  completed?: boolean
+  processed?: boolean
+
+  // Voice-specific fields
+  audioUrl?: string
+
+  // Legacy fields for backward compatibility
+  linkedEntryIds?: string[]
+}
+
+// Legacy types (deprecated - for migration only)
+export type EntryCategory = 'journal' | 'todo' | 'reminder' | 'note'
 
 export interface Transcription {
   id: string
@@ -18,22 +43,6 @@ export interface Transcription {
   tags: string[]
   processed: boolean
   linkedEntryId?: string
-}
-
-export interface Entry {
-  id: string
-  type: EntryCategory
-  title: string
-  content: string
-  date: Date
-  createdAt: Date
-  updatedAt: Date
-  tags: string[]
-  priority?: Priority
-  completed?: boolean
-  dueDate?: Date
-  transcriptionId?: string
-  linkedEntryIds: string[]
 }
 
 export interface DiaryEntry {

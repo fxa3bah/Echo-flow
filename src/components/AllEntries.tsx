@@ -2,74 +2,27 @@ import { useState, useEffect, useMemo } from 'react'
 import { Trash2, Calendar as CalendarIcon, Tag as TagIcon, CheckSquare, Square } from 'lucide-react'
 import { db } from '../lib/db'
 import { cn } from '../lib/utils'
-import type { Transcription, Entry, DiaryEntry } from '../types'
+import type { Entry } from '../types'
 
-type UnifiedEntry = {
-  id: string
-  date: Date
-  type: 'transcription' | 'todo' | 'reminder' | 'note' | 'journal' | 'diary'
-  content: string
-  tags: string[]
-  completed?: boolean
-  source: 'voice' | 'ai-chat' | 'diary'
-}
-
-type SortField = 'date' | 'type' | 'content'
+type SortField = 'date' | 'type' | 'content' | 'source'
 type SortDirection = 'asc' | 'desc'
 
 export function AllEntries() {
-  const [entries, setEntries] = useState<UnifiedEntry[]>([])
+  const [entries, setEntries] = useState<Entry[]>([])
   const [sortField, setSortField] = useState<SortField>('date')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Load all data from all tables
+  // Load all data from unified table
   useEffect(() => {
     loadAllData()
   }, [])
 
   const loadAllData = async () => {
     try {
-      const [transcriptions, dbEntries, diaryEntries] = await Promise.all([
-        db.transcriptions.toArray(),
-        db.entries.toArray(),
-        db.diaryEntries.toArray(),
-      ])
-
-      const unified: UnifiedEntry[] = [
-        // Transcriptions (voice recordings)
-        ...transcriptions.map((t: Transcription) => ({
-          id: t.id,
-          date: t.createdAt,
-          type: 'transcription' as const,
-          content: t.text,
-          tags: t.tags || [],
-          source: 'voice' as const,
-        })),
-
-        // Entries (todos, reminders, notes from AI)
-        ...dbEntries.map((e: Entry) => ({
-          id: e.id,
-          date: e.date || e.createdAt,
-          type: e.type,
-          content: e.content,
-          tags: e.tags || [],
-          completed: e.completed,
-          source: 'ai-chat' as const,
-        })),
-
-        // Diary entries
-        ...diaryEntries.map((d: DiaryEntry) => ({
-          id: d.id,
-          date: d.date,
-          type: 'diary' as const,
-          content: d.content,
-          tags: [],
-          source: 'diary' as const,
-        })),
-      ]
-
-      setEntries(unified)
+      // Simple! Just one table query
+      const allEntries = await db.entries.toArray()
+      setEntries(allEntries)
     } catch (error) {
       console.error('Failed to load data:', error)
     }
@@ -85,6 +38,7 @@ export function AllEntries() {
       filtered = filtered.filter(
         (e) =>
           e.content.toLowerCase().includes(query) ||
+          (e.title && e.title.toLowerCase().includes(query)) ||
           e.tags.some((tag) => tag.toLowerCase().includes(query))
       )
     }
@@ -99,6 +53,9 @@ export function AllEntries() {
           break
         case 'type':
           comparison = a.type.localeCompare(b.type)
+          break
+        case 'source':
+          comparison = a.source.localeCompare(b.source)
           break
         case 'content':
           comparison = a.content.localeCompare(b.content)
@@ -118,17 +75,12 @@ export function AllEntries() {
     }
   }
 
-  const handleDelete = async (id: string, type: UnifiedEntry['type']) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('Delete this entry?')) return
 
     try {
-      if (type === 'transcription') {
-        await db.transcriptions.delete(id)
-      } else if (type === 'diary') {
-        await db.diaryEntries.delete(id)
-      } else {
-        await db.entries.delete(id)
-      }
+      // Simple! Just delete from unified table
+      await db.entries.delete(id)
       await loadAllData()
     } catch (error) {
       console.error('Failed to delete:', error)
@@ -146,6 +98,8 @@ export function AllEntries() {
 
   const getTypeColor = (type: string) => {
     switch (type) {
+      case 'voice':
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
       case 'todo':
         return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
       case 'reminder':
@@ -155,11 +109,24 @@ export function AllEntries() {
       case 'journal':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
       case 'diary':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-      case 'transcription':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+        return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400'
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+    }
+  }
+
+  const getSourceBadge = (source: string) => {
+    switch (source) {
+      case 'voice':
+        return '🎤 Voice'
+      case 'ai-chat':
+        return '🤖 AI'
+      case 'manual':
+        return '✍️ Manual'
+      case 'diary':
+        return '📔 Diary'
+      default:
+        return source
     }
   }
 
@@ -208,6 +175,15 @@ export function AllEntries() {
               </th>
               <th className="text-left p-3 font-medium">
                 <button
+                  onClick={() => handleSort('source')}
+                  className="flex items-center gap-1 hover:text-primary transition-colors"
+                >
+                  Source
+                  {sortField === 'source' && <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>}
+                </button>
+              </th>
+              <th className="text-left p-3 font-medium">
+                <button
                   onClick={() => handleSort('content')}
                   className="flex items-center gap-1 hover:text-primary transition-colors"
                 >
@@ -222,7 +198,7 @@ export function AllEntries() {
           <tbody className="divide-y divide-border">
             {sortedEntries.length === 0 ? (
               <tr>
-                <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                <td colSpan={6} className="p-8 text-center text-muted-foreground">
                   {searchQuery ? 'No entries match your search' : 'No entries yet. Start recording or add notes!'}
                 </td>
               </tr>
@@ -249,6 +225,13 @@ export function AllEntries() {
                     </span>
                   </td>
 
+                  {/* Source */}
+                  <td className="p-3">
+                    <span className="text-sm text-muted-foreground">
+                      {getSourceBadge(entry.source)}
+                    </span>
+                  </td>
+
                   {/* Content */}
                   <td className="p-3">
                     <div className="flex items-start gap-2">
@@ -264,14 +247,19 @@ export function AllEntries() {
                           )}
                         </button>
                       )}
-                      <p
-                        className={cn(
-                          'text-sm line-clamp-2',
-                          entry.completed && 'line-through text-muted-foreground'
+                      <div className="flex-1 min-w-0">
+                        {entry.title && (
+                          <div className="font-medium text-sm mb-1">{entry.title}</div>
                         )}
-                      >
-                        {entry.content}
-                      </p>
+                        <p
+                          className={cn(
+                            'text-sm line-clamp-2',
+                            entry.completed && 'line-through text-muted-foreground'
+                          )}
+                        >
+                          {entry.content}
+                        </p>
+                      </div>
                     </div>
                   </td>
 
@@ -295,7 +283,7 @@ export function AllEntries() {
                   {/* Actions */}
                   <td className="p-3 text-right">
                     <button
-                      onClick={() => handleDelete(entry.id, entry.type)}
+                      onClick={() => handleDelete(entry.id)}
                       className="p-2 hover:bg-destructive/10 hover:text-destructive rounded transition-colors"
                       title="Delete"
                     >

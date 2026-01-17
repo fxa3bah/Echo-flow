@@ -5,7 +5,7 @@ import { useAudioRecorder } from '../hooks/useAudioRecorder'
 import { transcribeWithGroq, isGroqConfigured, validateGroqSetup } from '../services/groqService'
 import { db } from '../lib/db'
 import { aiService } from '../services/aiService'
-import type { Transcription } from '../types'
+import type { Entry } from '../types'
 import { cn } from '../lib/utils'
 
 export function VoiceRecorder() {
@@ -105,36 +105,29 @@ export function VoiceRecorder() {
       // Analyze the text with AI
       const analysis = await aiService.analyzeText(transcript)
 
-      // Save to database
-      const transcription: Transcription = {
+      // Map old category to new type
+      const entryType = analysis.category === 'journal' ? 'journal' :
+                        analysis.category === 'note' ? 'note' :
+                        analysis.category === 'todo' ? 'todo' :
+                        analysis.category === 'reminder' ? 'reminder' : 'voice'
+
+      // Save to unified entries table
+      const entry: Entry = {
         id: crypto.randomUUID(),
-        text: transcript,
+        type: entryType,
+        source: 'voice',
+        content: transcript,
+        title: analysis.suggestedTitle || undefined,
+        date: analysis.suggestedDate || new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
-        category: analysis.category,
         tags: analysis.tags,
+        priority: analysis.priority,
+        completed: false,
         processed: true,
       }
 
-      await db.transcriptions.add(transcription)
-
-      // If AI suggested creating an entry, create it
-      if (analysis.category === 'todo' || analysis.category === 'reminder') {
-        await db.entries.add({
-          id: crypto.randomUUID(),
-          type: analysis.category,
-          title: analysis.suggestedTitle || transcript.slice(0, 50),
-          content: transcript,
-          date: analysis.suggestedDate || new Date(),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          tags: analysis.tags,
-          priority: analysis.priority,
-          completed: false,
-          transcriptionId: transcription.id,
-          linkedEntryIds: [],
-        })
-      }
+      await db.entries.add(entry)
 
       setSaveSuccess(true)
       setTranscript('')
