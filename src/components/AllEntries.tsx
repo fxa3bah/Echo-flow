@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Trash2, Calendar as CalendarIcon, Tag as TagIcon, CheckSquare, Square } from 'lucide-react'
+import { Trash2, Calendar as CalendarIcon, Tag as TagIcon, CheckSquare, Square, Edit3, X } from 'lucide-react'
 import { db } from '../lib/db'
 import { cn } from '../lib/utils'
 import type { Entry } from '../types'
@@ -12,6 +12,8 @@ export function AllEntries() {
   const [sortField, setSortField] = useState<SortField>('date')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [searchQuery, setSearchQuery] = useState('')
+  const [editingEntry, setEditingEntry] = useState<Entry | null>(null)
+  const [editedTags, setEditedTags] = useState('')
 
   // Load all data from unified table
   useEffect(() => {
@@ -94,6 +96,45 @@ export function AllEntries() {
     } catch (error) {
       console.error('Failed to update:', error)
     }
+  }
+
+  const openEdit = (entry: Entry) => {
+    setEditingEntry(entry)
+    setEditedTags((entry.tags || []).join(', '))
+  }
+
+  const closeEdit = () => {
+    setEditingEntry(null)
+    setEditedTags('')
+  }
+
+  const handleEditSave = async () => {
+    if (!editingEntry) return
+
+    const normalizedTags = editedTags
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+
+    try {
+      await db.entries.update(editingEntry.id, {
+        title: editingEntry.title?.trim() || undefined,
+        content: editingEntry.content.trim(),
+        date: editingEntry.date,
+        tags: normalizedTags,
+        updatedAt: new Date(),
+      })
+      await loadAllData()
+      closeEdit()
+    } catch (error) {
+      console.error('Failed to update:', error)
+    }
+  }
+
+  const formatDateTimeLocal = (date: Date) => {
+    const offset = date.getTimezoneOffset()
+    const local = new Date(date.getTime() - offset * 60 * 1000)
+    return local.toISOString().slice(0, 16)
   }
 
   const getTypeColor = (type: string) => {
@@ -283,6 +324,13 @@ export function AllEntries() {
                   {/* Actions */}
                   <td className="p-3 text-right whitespace-nowrap align-top">
                     <button
+                      onClick={() => openEdit(entry)}
+                      className="p-2 hover:bg-muted/70 text-muted-foreground hover:text-foreground rounded transition-colors"
+                      title="Edit"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={() => handleDelete(entry.id)}
                       className="p-2 hover:bg-destructive/10 hover:text-destructive rounded transition-colors"
                       title="Delete"
@@ -302,6 +350,83 @@ export function AllEntries() {
         Showing {sortedEntries.length} of {entries.length} entries
         {searchQuery && ` (filtered by "${searchQuery}")`}
       </div>
+
+      {editingEntry && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-xl rounded-xl bg-background shadow-lg border border-border">
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <h3 className="text-lg font-semibold">Edit Entry</h3>
+              <button
+                onClick={closeEdit}
+                className="p-2 rounded hover:bg-muted/70 text-muted-foreground hover:text-foreground"
+                aria-label="Close edit dialog"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-medium mb-1">Title</label>
+                <input
+                  type="text"
+                  value={editingEntry.title || ''}
+                  onChange={(e) =>
+                    setEditingEntry((prev) => (prev ? { ...prev, title: e.target.value } : prev))
+                  }
+                  className="w-full px-3 py-2 text-sm border border-border rounded bg-background"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1">Content</label>
+                <textarea
+                  value={editingEntry.content}
+                  onChange={(e) =>
+                    setEditingEntry((prev) => (prev ? { ...prev, content: e.target.value } : prev))
+                  }
+                  className="w-full px-3 py-2 text-sm border border-border rounded bg-background resize-none"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1">Date &amp; Time</label>
+                <input
+                  type="datetime-local"
+                  value={formatDateTimeLocal(editingEntry.date)}
+                  onChange={(e) => {
+                    const nextDate = e.target.value ? new Date(e.target.value) : new Date()
+                    setEditingEntry((prev) => (prev ? { ...prev, date: nextDate } : prev))
+                  }}
+                  className="w-full px-3 py-2 text-sm border border-border rounded bg-background"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1">Tags (comma-separated)</label>
+                <input
+                  type="text"
+                  value={editedTags}
+                  onChange={(e) => setEditedTags(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-border rounded bg-background"
+                  placeholder="work, important"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
+              <button
+                onClick={closeEdit}
+                className="px-3 py-1.5 text-sm bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditSave}
+                className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+              >
+                Save changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
