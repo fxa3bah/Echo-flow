@@ -18,7 +18,7 @@ export function DiaryEditor() {
   const [content, setContent] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
-  const [isPreviewMode, setIsPreviewMode] = useState(false)
+  const [isPreviewMode, setIsPreviewMode] = useState(true)
   const [renderedHtml, setRenderedHtml] = useState('')
   const saveTimeoutRef = useRef<number | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -68,6 +68,12 @@ export function DiaryEditor() {
       setContent('')
     }
   }, [diaryEntry])
+
+  useEffect(() => {
+    if (!diaryEntry?.content) {
+      setIsPreviewMode(false)
+    }
+  }, [diaryEntry?.content])
 
   // Render markdown when in preview mode
   useEffect(() => {
@@ -298,7 +304,7 @@ export function DiaryEditor() {
       {dayTranscriptions && dayTranscriptions.length > 0 && (
         <div className="mb-6 space-y-2">
           <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-            Voice Recordings
+            Captured Notes
           </h4>
           {dayTranscriptions.map((transcription) => (
             <div
@@ -406,16 +412,8 @@ export function DiaryEditor() {
                 ref={textareaRef}
                 value={content}
                 onChange={handleContentChange}
-                placeholder="Write your thoughts for today...
-
-Markdown shortcuts:
-- Type / for commands menu
-- **bold**, *italic*, ~~strikethrough~~
-- # Heading, ## Heading 2
-- - Bullet list, 1. Numbered list
-- [ ] Todo, [x] Done
-- Type naturally: tomorrow, next week, call John, etc."
-                className="w-full p-4 bg-transparent border-none focus:outline-none resize-none min-h-[300px] font-mono text-sm"
+                placeholder="Write your thoughts for today... (Markdown supported)"
+                className="w-full p-4 bg-transparent border-none focus:outline-none resize-none min-h-[300px] font-sans text-sm"
                 style={{ overflow: 'hidden' }}
               />
 
@@ -433,8 +431,8 @@ Markdown shortcuts:
         </div>
         <p className="text-xs text-muted-foreground">
           {isPreviewMode
-            ? 'Viewing rendered markdown. Click Edit to modify.'
-            : 'Type / for markdown commands. Dates, todos, and reminders are auto-detected.'}
+            ? 'Viewing formatted text. Click Edit to modify.'
+            : 'Markdown is supported. Type / for commands. Dates, todos, and reminders are auto-detected.'}
         </p>
       </div>
     </div>
