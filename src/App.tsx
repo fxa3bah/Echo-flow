@@ -7,6 +7,7 @@ import { CalendarView } from './components/CalendarView'
 import { EisenhowerMatrix } from './components/EisenhowerMatrix'
 import { DiaryEditor } from './components/DiaryEditor'
 import { AIInsights } from './components/AIInsights'
+import { AIChatBox } from './components/AIChatBox'
 import { SettingsModal } from './components/SettingsModal'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { cn } from './lib/utils'
@@ -81,6 +82,7 @@ function App() {
                 </p>
               </div>
               <VoiceRecorder />
+              <AIChatBox />
             </div>
           )}
 
