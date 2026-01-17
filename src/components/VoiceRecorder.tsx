@@ -9,7 +9,7 @@ import type { Transcription } from '../types'
 import { cn } from '../lib/utils'
 
 export function VoiceRecorder() {
-  const useWhisper = isWhisperConfigured()
+  const whisperConfigured = isWhisperConfigured()
 
   // Web Speech API (fallback)
   const speechRecognition = useSpeechRecognition()
@@ -22,6 +22,7 @@ export function VoiceRecorder() {
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [useWhisper, setUseWhisper] = useState(whisperConfigured)
 
   const isRecording = useWhisper ? audioRecorder.isRecording : speechRecognition.isListening
   const currentError = useWhisper ? audioRecorder.error : speechRecognition.error
@@ -51,7 +52,24 @@ export function VoiceRecorder() {
           }
         } catch (err: any) {
           console.error('Transcription error:', err)
-          setError(err.message || 'Failed to transcribe audio')
+          const errorMessage = err.message || 'Failed to transcribe audio'
+
+          // Check if this is a connection/CORS error and offer fallback
+          if (errorMessage.includes('Connection error') || errorMessage.includes('CORS')) {
+            setError(
+              errorMessage +
+              ' Would you like to use browser-based speech recognition instead?'
+            )
+            // Automatically fallback to Web Speech API
+            if (speechRecognition.isSupported) {
+              setTimeout(() => {
+                setUseWhisper(false)
+                setError('Switched to browser-based speech recognition due to connection issues.')
+              }, 3000)
+            }
+          } else {
+            setError(errorMessage)
+          }
         } finally {
           setIsTranscribing(false)
         }
@@ -149,15 +167,28 @@ export function VoiceRecorder() {
 
   return (
     <div className="space-y-6">
-      {/* Mode Indicator */}
-      {useWhisper && (
-        <div className="text-center text-sm text-muted-foreground">
+      {/* Mode Indicator and Toggle */}
+      <div className="text-center text-sm text-muted-foreground space-y-2">
+        {useWhisper ? (
           <span className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
             Using OpenAI Whisper (High Accuracy Mode)
           </span>
-        </div>
-      )}
+        ) : (
+          <span className="inline-flex items-center gap-2 px-3 py-1 bg-secondary/50 rounded-full">
+            <span className="w-2 h-2 bg-blue-500 rounded-full" />
+            Using Browser Speech Recognition
+          </span>
+        )}
+        {whisperConfigured && speechRecognition.isSupported && !isRecording && (
+          <button
+            onClick={() => setUseWhisper(!useWhisper)}
+            className="text-xs text-primary hover:underline"
+          >
+            Switch to {useWhisper ? 'Browser Speech Recognition' : 'OpenAI Whisper'}
+          </button>
+        )}
+      </div>
 
       {/* Recording Button */}
       <div className="flex justify-center">
