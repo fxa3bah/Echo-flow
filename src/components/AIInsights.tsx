@@ -1,0 +1,273 @@
+import { useState, useRef, useEffect } from 'react'
+import { Send, Loader2, Sparkles, CheckCircle2, Mic, MicOff } from 'lucide-react'
+import { getAIInsights, type ChatMessage } from '../services/groqChatService'
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
+import { db } from '../lib/db'
+import { cn } from '../lib/utils'
+import type { Priority } from '../types'
+
+interface Message {
+  role: 'user' | 'assistant'
+  content: string
+  actions?: any[]
+}
+
+export function AIInsights() {
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      role: 'assistant',
+      content: 'Hi! I\'m your AI assistant. Tell me what you need to do, and I\'ll help organize it for you. Just talk naturally! 😊'
+    }
+  ])
+  const [input, setInput] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [actionsCreated, setActionsCreated] = useState(0)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  // Voice input
+  const speechRecognition = useSpeechRecognition()
+  const [isListening, setIsListening] = useState(false)
+
+  useEffect(() => {
+    if (speechRecognition.transcript && isListening) {
+      setInput(speechRecognition.transcript)
+    }
+  }, [speechRecognition.transcript, isListening])
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
+  const handleVoiceToggle = () => {
+    if (isListening) {
+      speechRecognition.stopListening()
+      setIsListening(false)
+    } else {
+      speechRecognition.resetTranscript()
+      speechRecognition.startListening()
+      setIsListening(true)
+    }
+  }
+
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return
+
+    const userMessage = input.trim()
+    setInput('')
+    speechRecognition.resetTranscript()
+    setIsListening(false)
+    speechRecognition.stopListening()
+
+    // Add user message
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }])
+    setIsLoading(true)
+
+    try {
+      // Get AI response with extracted actions
+      const conversationHistory: ChatMessage[] = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }))
+
+      const insight = await getAIInsights(userMessage, conversationHistory)
+
+      // Add assistant message
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: insight.response,
+        actions: insight.actions
+      }])
+
+      // Create database entries for actions
+      if (insight.actions && insight.actions.length > 0) {
+        let created = 0
+        for (const action of insight.actions) {
+          try {
+            if (action.type === 'todo' || action.type === 'reminder') {
+              // Validate and cast priority
+              const validPriorities: Priority[] = ['urgent-important', 'not-urgent-important', 'urgent-not-important', 'not-urgent-not-important']
+              const priority: Priority = validPriorities.includes(action.priority as Priority)
+                ? action.priority as Priority
+                : 'not-urgent-not-important'
+
+              await db.entries.add({
+                id: crypto.randomUUID(),
+                type: action.type,
+                title: action.title,
+                content: action.content,
+                date: action.date || new Date(),
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                tags: action.tags || [],
+                priority,
+                completed: false,
+                linkedEntryIds: [],
+              })
+              created++
+            } else if (action.type === 'journal' || action.type === 'note') {
+              await db.transcriptions.add({
+                id: crypto.randomUUID(),
+                text: action.content,
+                createdAt: action.date || new Date(),
+                updatedAt: new Date(),
+                category: action.type === 'journal' ? 'journal' : 'note',
+                tags: action.tags || [],
+                processed: true,
+              })
+              created++
+            }
+          } catch (error) {
+            console.error('Failed to create entry:', error)
+          }
+        }
+
+        if (created > 0) {
+          setActionsCreated(prev => prev + created)
+          setTimeout(() => setActionsCreated(0), 3000)
+        }
+      }
+    } catch (error: any) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `Sorry, I encountered an error: ${error.message}. Please make sure your Groq API key is configured.`
+      }])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-8rem)] max-w-4xl mx-auto p-4">
+      {/* Header */}
+      <div className="mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles className="w-6 h-6 text-primary" />
+          <h2 className="text-2xl font-bold">AI Insights</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Chat naturally with AI. It will automatically create todos, reminders, and notes for you.
+        </p>
+        {actionsCreated > 0 && (
+          <div className="mt-2 flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+            <CheckCircle2 className="w-4 h-4" />
+            <span>{actionsCreated} item{actionsCreated > 1 ? 's' : ''} created!</span>
+          </div>
+        )}
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-4 bg-muted/30 rounded-lg">
+        {messages.map((message, index) => (
+          <div
+            key={index}
+            className={cn(
+              'flex gap-3',
+              message.role === 'user' ? 'justify-end' : 'justify-start'
+            )}
+          >
+            {message.role === 'assistant' && (
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-primary-foreground" />
+              </div>
+            )}
+            <div
+              className={cn(
+                'max-w-[70%] rounded-lg p-3',
+                message.role === 'user'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-card border border-border'
+              )}
+            >
+              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              {message.actions && message.actions.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-border space-y-1">
+                  {message.actions.map((action, i) => (
+                    <div key={i} className="text-xs text-muted-foreground flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Created {action.type}: {action.title}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {message.role === 'user' && (
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+                <span className="text-sm font-medium">You</span>
+              </div>
+            )}
+          </div>
+        ))}
+        {isLoading && (
+          <div className="flex gap-3">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <div className="bg-card border border-border rounded-lg p-3">
+              <Loader2 className="w-4 h-4 animate-spin" />
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div className="space-y-2">
+        {speechRecognition.error && (
+          <div className="text-sm text-destructive">{speechRecognition.error}</div>
+        )}
+        <div className="flex gap-2">
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSend()
+              }
+            }}
+            placeholder="Type or speak your message... (Shift+Enter for new line)"
+            className="flex-1 p-3 border border-border rounded-lg bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+            rows={2}
+            disabled={isLoading}
+          />
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={handleVoiceToggle}
+              disabled={isLoading}
+              className={cn(
+                'p-3 rounded-lg transition-colors',
+                isListening
+                  ? 'bg-destructive text-destructive-foreground'
+                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+                isLoading && 'opacity-50 cursor-not-allowed'
+              )}
+              aria-label={isListening ? 'Stop listening' : 'Start voice input'}
+            >
+              {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+            </button>
+            <button
+              onClick={handleSend}
+              disabled={!input.trim() || isLoading}
+              className={cn(
+                'p-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90',
+                'transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+              )}
+              aria-label="Send message"
+            >
+              {isLoading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+            </button>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground text-center">
+          Press Enter to send • Shift+Enter for new line • Click mic to speak
+        </p>
+      </div>
+    </div>
+  )
+}

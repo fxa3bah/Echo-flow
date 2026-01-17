@@ -1,8 +1,8 @@
-import { Home, FileText, Calendar, Grid3x3, BookOpen, Moon, Sun, Settings } from 'lucide-react'
+import { Home, FileText, Calendar, Grid3x3, BookOpen, Moon, Sun, Settings, Sparkles } from 'lucide-react'
 import { useThemeStore } from '../stores/themeStore'
 import { cn } from '../lib/utils'
 
-type View = 'home' | 'transcriptions' | 'calendar' | 'matrix' | 'diary'
+type View = 'home' | 'aiinsights' | 'transcriptions' | 'calendar' | 'matrix' | 'diary'
 
 interface NavigationProps {
   currentView: View
@@ -20,6 +20,7 @@ export function Navigation({ currentView, onViewChange, onOpenSettings }: Naviga
   const navItems = [
     { id: 'home' as View, icon: Home, label: 'Record' },
     { id: 'diary' as View, icon: BookOpen, label: 'Daily Notes' },
+    { id: 'aiinsights' as View, icon: Sparkles, label: 'AI Chat' },
     { id: 'transcriptions' as View, icon: FileText, label: 'Transcriptions' },
     { id: 'calendar' as View, icon: Calendar, label: 'Calendar' },
     { id: 'matrix' as View, icon: Grid3x3, label: 'Matrix' },
