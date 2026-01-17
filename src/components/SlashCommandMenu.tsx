@@ -93,6 +93,7 @@ export function SlashCommandMenu({ filter, onSelect, onClose, position }: SlashC
   // Handle keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (filteredCommands.length === 0) return
       if (e.key === 'ArrowDown') {
         e.preventDefault()
         setSelectedIndex(prev => (prev + 1) % filteredCommands.length)
@@ -113,6 +114,21 @@ export function SlashCommandMenu({ filter, onSelect, onClose, position }: SlashC
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [filteredCommands, selectedIndex, onSelect, onClose])
+
+  useEffect(() => {
+    setSelectedIndex(0)
+  }, [filter])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        onClose()
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [onClose])
 
   // Scroll selected item into view
   useEffect(() => {
