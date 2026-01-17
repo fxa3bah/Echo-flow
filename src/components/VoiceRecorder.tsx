@@ -24,6 +24,7 @@ export function VoiceRecorder() {
   const [error, setError] = useState<string | null>(null)
   const [useWhisper, setUseWhisper] = useState(whisperConfigured)
   const [setupWarning, setSetupWarning] = useState<string | null>(null)
+  const [showManualInput, setShowManualInput] = useState(false)
 
   const isRecording = useWhisper ? audioRecorder.isRecording : speechRecognition.isListening
   const currentError = useWhisper ? audioRecorder.error : speechRecognition.error
@@ -242,46 +243,95 @@ export function VoiceRecorder() {
         </div>
       )}
 
-      {/* Recording Button */}
-      <div className="flex justify-center">
-        <button
-          onClick={handleToggleRecording}
-          disabled={isTranscribing}
-          className={cn(
-            'relative w-32 h-32 rounded-full flex items-center justify-center',
-            'transition-all duration-300 transform hover:scale-105',
-            'focus:outline-none focus:ring-4 focus:ring-primary/50',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
-            isRecording
-              ? 'bg-destructive text-destructive-foreground animate-pulse-slow shadow-lg shadow-destructive/50'
-              : 'bg-primary text-primary-foreground shadow-lg shadow-primary/30'
-          )}
-          aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-        >
-          {isTranscribing ? (
-            <Loader2 size={48} className="animate-spin" />
-          ) : isRecording ? (
-            <MicOff size={48} />
-          ) : (
-            <Mic size={48} />
-          )}
-          {isRecording && !isTranscribing && (
-            <span className="absolute -bottom-8 text-sm font-medium">
-              Recording...
-            </span>
-          )}
-          {isTranscribing && (
-            <span className="absolute -bottom-8 text-sm font-medium">
-              Transcribing...
-            </span>
-          )}
-        </button>
+      {/* Recording Button and Type Instead Option */}
+      <div className="space-y-4">
+        <div className="flex justify-center">
+          <button
+            onClick={handleToggleRecording}
+            disabled={isTranscribing || showManualInput}
+            className={cn(
+              'relative w-32 h-32 rounded-full flex items-center justify-center',
+              'transition-all duration-300 transform hover:scale-105',
+              'focus:outline-none focus:ring-4 focus:ring-primary/50',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              isRecording
+                ? 'bg-destructive text-destructive-foreground animate-pulse-slow shadow-lg shadow-destructive/50'
+                : 'bg-primary text-primary-foreground shadow-lg shadow-primary/30'
+            )}
+            aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+          >
+            {isTranscribing ? (
+              <Loader2 size={48} className="animate-spin" />
+            ) : isRecording ? (
+              <MicOff size={48} />
+            ) : (
+              <Mic size={48} />
+            )}
+            {isRecording && !isTranscribing && (
+              <span className="absolute -bottom-8 text-sm font-medium">
+                Recording...
+              </span>
+            )}
+            {isTranscribing && (
+              <span className="absolute -bottom-8 text-sm font-medium">
+                Transcribing...
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Type Instead Button */}
+        {!isRecording && !isTranscribing && !showManualInput && !transcript && (
+          <div className="text-center">
+            <button
+              onClick={() => setShowManualInput(true)}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors underline"
+            >
+              Or type your text instead
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Error Message */}
+      {/* Error Message with Manual Input Option */}
       {(currentError || error) && (
-        <div className="p-4 bg-destructive/10 text-destructive rounded-lg text-center">
-          {error || currentError}
+        <div className="p-4 bg-destructive/10 text-destructive rounded-lg space-y-3">
+          <p className="text-center">{error || currentError}</p>
+          {!showManualInput && (
+            <button
+              onClick={() => setShowManualInput(true)}
+              className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Type Text Instead
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Manual Text Input */}
+      {showManualInput && !transcript && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">
+            Type your note, task, or reminder:
+          </label>
+          <textarea
+            value={transcript}
+            onChange={(e) => setTranscript(e.target.value)}
+            placeholder="Call Daniel tomorrow at 1pm..."
+            className="w-full p-4 border border-border rounded-lg bg-background min-h-32 focus:outline-none focus:ring-2 focus:ring-primary"
+            autoFocus
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setShowManualInput(false)
+                setTranscript('')
+              }}
+              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
