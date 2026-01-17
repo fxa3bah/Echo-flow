@@ -80,30 +80,6 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     return { pendingActions, followUpPrompt }
   }
 
-  const extractLocalDate = (message: string, fallback = new Date()) => {
-    const lower = message.toLowerCase()
-    const base = new Date(fallback)
-    if (lower.includes('tomorrow')) {
-      base.setDate(base.getDate() + 1)
-    } else if (lower.includes('today')) {
-      base.setHours(base.getHours())
-    }
-    return base
-  }
-
-  const extractTimeFromMessage = (message: string) => {
-    const match = message.match(/\b(?:before|by|at)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i)
-    if (!match) return null
-    const hour = Number(match[1])
-    const minute = match[2] ? Number(match[2]) : 0
-    const meridiem = match[3].toLowerCase()
-    let adjustedHour = hour % 12
-    if (meridiem === 'pm') {
-      adjustedHour += 12
-    }
-    return { hour: adjustedHour, minute }
-  }
-
   const deriveTags = (text: string) => {
     const stopwords = new Set(['the', 'and', 'for', 'with', 'this', 'that', 'from', 'have', 'your', 'you', 'today'])
     return Array.from(
