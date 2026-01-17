@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Echo Flow - Test Data Populator</title>
+    <script type="module">
+        import { db } from './src/lib/db.ts'
+
+        async function populateTestData() {
+            const log = document.getElementById('log')
+            const addLog = (msg) => {
+                log.innerHTML += `<div>${msg}</div>`
+            }
+
+            try {
+                addLog('🔄 Populating test data...')
+
+                // Clear existing data
+                await db.entries.clear()
+                addLog('✅ Cleared existing entries')
+
+                const now = new Date()
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+                const tomorrow = new Date(today)
+                tomorrow.setDate(tomorrow.getDate() + 1)
+                const yesterday = new Date(today)
+                yesterday.setDate(yesterday.getDate() - 1)
+
+                // 1. Voice transcriptions
+                await db.entries.add({
+                    id: crypto.randomUUID(),
+                    type: 'voice',
+                    source: 'voice',
+                    content: 'I need to buy groceries today. Milk, bread, and eggs.',
+                    date: today,
+                    createdAt: new Date(today.getTime() + 1000 * 60 * 60 * 9), // 9 AM
+                    updatedAt: new Date(today.getTime() + 1000 * 60 * 60 * 9),
+                    tags: ['shopping', 'groceries'],
+                    completed: false,
+                    processed: true,
+                })
+                addLog('✅ Added voice transcription (groceries)')
+
+                // 2. AI-generated todo
+                await db.entries.add({
+                    id: crypto.randomUUID(),
+                    type: 'todo',
+                    source: 'ai-chat',
+                    title: 'Call Daniel about project',
+                    content: 'Call Daniel tomorrow at 1pm',
+                    date: tomorrow,
+                    createdAt: today,
+                    updatedAt: today,
+                    tags: ['call', 'Daniel', 'Entry'],
+                    completed: false,
+                    processed: true,
+                    priority: 'not-urgent-important',
+                })
+                addLog('✅ Added AI todo (Call Daniel)')
+
+                // 3. AI-generated reminder
+                await db.entries.add({
+                    id: crypto.randomUUID(),
+                    type: 'reminder',
+                    source: 'ai-chat',
+                    title: 'Team meeting',
+                    content: 'Team meeting at 3pm in conference room A',
+                    date: today,
+                    createdAt: yesterday,
+                    updatedAt: yesterday,
+                    tags: ['meeting', 'work'],
+                    completed: false,
+                    processed: true,
+                    priority: 'urgent-important',
+                })
+                addLog('✅ Added AI reminder (Team meeting)')
+
+                // 4. Manual note
+                await db.entries.add({
+                    id: crypto.randomUUID(),
+                    type: 'note',
+                    source: 'manual',
+                    title: 'Ideas for new feature',
+                    content: 'Consider adding dark mode toggle in settings. Users have been requesting this feature.',
+                    date: yesterday,
+                    createdAt: yesterday,
+                    updatedAt: yesterday,
+                    tags: ['ideas', 'features'],
+                    completed: false,
+                    processed: true,
+                })
+                addLog('✅ Added manual note (Feature ideas)')
+
+                // 5. Journal entry
+                await db.entries.add({
+                    id: crypto.randomUUID(),
+                    type: 'journal',
+                    source: 'ai-chat',
+                    title: 'Great day at work',
+                    content: 'Today was amazing! Finished the presentation and got great feedback from the team. Feeling accomplished.',
+                    date: today,
+                    createdAt: new Date(today.getTime() + 1000 * 60 * 60 * 18), // 6 PM
+                    updatedAt: new Date(today.getTime() + 1000 * 60 * 60 * 18),
+                    tags: ['success', 'work', 'presentation'],
+                    completed: false,
+                    processed: true,
+                })
+                addLog('✅ Added journal entry (Great day)')
+
+                // 6. Diary entry
+                await db.entries.add({
+                    id: crypto.randomUUID(),
+                    type: 'diary',
+                    source: 'diary',
+                    title: `Daily Notes - ${today.toLocaleDateString()}`,
+                    content: `# ${today.toLocaleDateString()}
+
+## Morning
+- [x] Morning workout
+- [x] Reviewed emails
+- [ ] Prepare presentation
+
+## Afternoon
+- Team sync meeting
+- Code review with Sarah
+
+## Evening
+- [ ] Review budget report
+- Dinner with family
+
+## Notes
+Great productive day! Team was engaged in the presentation.`,
+                    date: today,
+                    createdAt: today,
+                    updatedAt: today,
+                    tags: [],
+                    completed: false,
+                    processed: true,
+                })
+                addLog('✅ Added diary entry (Daily Notes)')
+
+                // 7. More varied entries for testing
+                await db.entries.add({
+                    id: crypto.randomUUID(),
+                    type: 'todo',
+                    source: 'voice',
+                    title: 'Review budget report',
+                    content: 'Need to review the Q4 budget report by end of week',
+                    date: new Date(today.getTime() + 1000 * 60 * 60 * 24 * 3), // 3 days from now
+                    createdAt: today,
+                    updatedAt: today,
+                    tags: ['work', 'budget', 'urgent'],
+                    completed: false,
+                    processed: false, // Unprocessed!
+                    priority: 'urgent-important',
+                })
+                addLog('✅ Added todo (Budget review - unprocessed)')
+
+                await db.entries.add({
+                    id: crypto.randomUUID(),
+                    type: 'todo',
+                    source: 'ai-chat',
+                    title: 'Buy birthday gift for mom',
+                    content: 'Mom\'s birthday is next week. Need to buy a gift.',
+                    date: new Date(today.getTime() + 1000 * 60 * 60 * 24 * 7), // 1 week from now
+                    createdAt: today,
+                    updatedAt: today,
+                    tags: ['personal', 'birthday', 'shopping'],
+                    completed: false,
+                    processed: true,
+                    priority: 'not-urgent-important',
+                })
+                addLog('✅ Added todo (Birthday gift)')
+
+                await db.entries.add({
+                    id: crypto.randomUUID(),
+                    type: 'reminder',
+                    source: 'manual',
+                    title: 'Doctor appointment',
+                    content: 'Annual checkup at Dr. Smith\'s office at 10am',
+                    date: new Date(today.getTime() + 1000 * 60 * 60 * 24 * 5), // 5 days from now
+                    createdAt: today,
+                    updatedAt: today,
+                    tags: ['health', 'appointment'],
+                    completed: false,
+                    processed: true,
+                    priority: 'urgent-important',
+                })
+                addLog('✅ Added reminder (Doctor appointment)')
+
+                await db.entries.add({
+                    id: crypto.randomUUID(),
+                    type: 'note',
+                    source: 'voice',
+                    content: 'Remember to water the plants twice a week',
+                    date: yesterday,
+                    createdAt: yesterday,
+                    updatedAt: yesterday,
+                    tags: ['home', 'plants'],
+                    completed: false,
+                    processed: true,
+                })
+                addLog('✅ Added note (Water plants)')
+
+                // Count entries
+                const count = await db.entries.count()
+                addLog(`\n🎉 Test data populated successfully!`)
+                addLog(`📊 Total entries: ${count}`)
+
+                // Show breakdown by type
+                const voiceCount = await db.entries.where('type').equals('voice').count()
+                const todoCount = await db.entries.where('type').equals('todo').count()
+                const reminderCount = await db.entries.where('type').equals('reminder').count()
+                const noteCount = await db.entries.where('type').equals('note').count()
+                const journalCount = await db.entries.where('type').equals('journal').count()
+                const diaryCount = await db.entries.where('type').equals('diary').count()
+
+                addLog(`\n📋 Breakdown by type:`)
+                addLog(`  🎤 Voice: ${voiceCount}`)
+                addLog(`  ✅ Todos: ${todoCount}`)
+                addLog(`  ⏰ Reminders: ${reminderCount}`)
+                addLog(`  📝 Notes: ${noteCount}`)
+                addLog(`  📔 Journal: ${journalCount}`)
+                addLog(`  📖 Diary: ${diaryCount}`)
+
+                // Show breakdown by source
+                const voiceSourceCount = await db.entries.where('source').equals('voice').count()
+                const aiChatCount = await db.entries.where('source').equals('ai-chat').count()
+                const manualCount = await db.entries.where('source').equals('manual').count()
+                const diarySourceCount = await db.entries.where('source').equals('diary').count()
+
+                addLog(`\n📍 Breakdown by source:`)
+                addLog(`  🎤 Voice: ${voiceSourceCount}`)
+                addLog(`  🤖 AI Chat: ${aiChatCount}`)
+                addLog(`  ✍️ Manual: ${manualCount}`)
+                addLog(`  📔 Diary: ${diarySourceCount}`)
+
+                addLog(`\n✅ All data should now be visible in:`)
+                addLog(`  - All Entries page (Ctrl+E)`)
+                addLog(`  - Calendar view (dates with dots)`)
+                addLog(`  - Daily Notes (for selected date)`)
+                addLog(`  - Matrix view (with AI analysis)`)
+
+            } catch (error) {
+                addLog(`\n❌ Error: ${error.message}`)
+                console.error(error)
+            }
+        }
+
+        window.populateTestData = populateTestData
+    </script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        #log {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #0066cc;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        #log div {
+            margin: 4px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🧪 Echo Flow Test Data Populator</h1>
+        <p class="subtitle">Click the button below to populate the database with test data</p>
+
+        <button onclick="populateTestData()">🚀 Populate Test Data</button>
+
+        <div id="log" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Show log when button is clicked
+        document.querySelector('button').addEventListener('click', () => {
+            document.getElementById('log').style.display = 'block'
+            document.getElementById('log').innerHTML = ''
+        })
+    </script>
+</body>
+</html>
