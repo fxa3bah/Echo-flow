@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Mic, MicOff, Save, X, Loader2 } from 'lucide-react'
+import { Mic, MicOff, Save, X, Loader2, AlertCircle } from 'lucide-react'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
 import { useAudioRecorder } from '../hooks/useAudioRecorder'
-import { transcribeAudio, isWhisperConfigured } from '../services/whisperService'
+import { transcribeAudio, isWhisperConfigured, validateWhisperSetup } from '../services/whisperService'
 import { db } from '../lib/db'
 import { aiService } from '../services/aiService'
 import type { Transcription } from '../types'
@@ -23,6 +23,7 @@ export function VoiceRecorder() {
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [useWhisper, setUseWhisper] = useState(whisperConfigured)
+  const [setupWarning, setSetupWarning] = useState<string | null>(null)
 
   const isRecording = useWhisper ? audioRecorder.isRecording : speechRecognition.isListening
   const currentError = useWhisper ? audioRecorder.error : speechRecognition.error
@@ -55,17 +56,26 @@ export function VoiceRecorder() {
           const errorMessage = err.message || 'Failed to transcribe audio'
 
           // Check if this is a connection/CORS error and offer fallback
-          if (errorMessage.includes('Connection error') || errorMessage.includes('CORS')) {
-            setError(
-              errorMessage +
-              ' Would you like to use browser-based speech recognition instead?'
-            )
+          if (errorMessage.includes('Connection error') ||
+              errorMessage.includes('CORS') ||
+              errorMessage.includes('API key not configured')) {
+
             // Automatically fallback to Web Speech API
             if (speechRecognition.isSupported) {
-              setTimeout(() => {
-                setUseWhisper(false)
-                setError('Switched to browser-based speech recognition due to connection issues.')
-              }, 3000)
+              setUseWhisper(false)
+              setError(
+                'OpenAI Whisper is unavailable (likely due to CORS restrictions or missing API key). ' +
+                'Switched to browser-based speech recognition. For high-accuracy transcription, ' +
+                'consider setting up a backend proxy.'
+              )
+              setSetupWarning(
+                'Note: OpenAI API calls from the browser are restricted. Use Web Speech API or set up a backend proxy.'
+              )
+            } else {
+              setError(
+                errorMessage +
+                ' Browser speech recognition is also not available. Please check your setup.'
+              )
             }
           } else {
             setError(errorMessage)
@@ -151,7 +161,17 @@ export function VoiceRecorder() {
 
   useEffect(() => {
     aiService.checkOllamaAvailability()
-  }, [])
+
+    // Validate Whisper setup on mount
+    if (whisperConfigured) {
+      validateWhisperSetup().then((result) => {
+        if (!result.valid && result.error) {
+          setSetupWarning(result.error)
+          setUseWhisper(false)
+        }
+      })
+    }
+  }, [whisperConfigured])
 
   if (!isSupported) {
     return (
@@ -167,6 +187,14 @@ export function VoiceRecorder() {
 
   return (
     <div className="space-y-6">
+      {/* Setup Warning */}
+      {setupWarning && (
+        <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-start gap-2 text-sm">
+          <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
+          <p className="text-yellow-800 dark:text-yellow-200">{setupWarning}</p>
+        </div>
+      )}
+
       {/* Mode Indicator and Toggle */}
       <div className="text-center text-sm text-muted-foreground space-y-2">
         {useWhisper ? (
@@ -182,7 +210,11 @@ export function VoiceRecorder() {
         )}
         {whisperConfigured && speechRecognition.isSupported && !isRecording && (
           <button
-            onClick={() => setUseWhisper(!useWhisper)}
+            onClick={() => {
+              setUseWhisper(!useWhisper)
+              setSetupWarning(null)
+              setError(null)
+            }}
             className="text-xs text-primary hover:underline"
           >
             Switch to {useWhisper ? 'Browser Speech Recognition' : 'OpenAI Whisper'}

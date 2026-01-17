@@ -152,6 +152,60 @@ ollama pull llama3.2
 
 Without Ollama, the app uses intelligent rule-based categorization.
 
+## ⚠️ Troubleshooting Transcription Issues
+
+### "Connection Error" with OpenAI Whisper
+
+If you see a "Transcription Failed: Connection error" message, this is likely due to one of the following:
+
+**1. Missing or Invalid API Key**
+- Ensure you've created a `.env` file with `VITE_OPENAI_API_KEY`
+- API key should start with `sk-` and not be the placeholder value
+- Verify the key is valid at [OpenAI Platform](https://platform.openai.com/api-keys)
+
+**2. CORS Restrictions (Common Issue)**
+
+OpenAI's API has limited support for direct browser calls, which can cause CORS (Cross-Origin Resource Sharing) errors. When this happens, the app will:
+- Show a connection error message
+- Automatically switch to browser-based Web Speech API
+- Display a warning explaining the limitation
+
+**Solutions:**
+- **Recommended**: Use the Web Speech API (works in Chrome, Edge, Safari)
+  - The app automatically falls back to this
+  - Click "Switch to Browser Speech Recognition" in the UI
+  - No API key or costs required
+  - Good accuracy for English and major languages
+
+- **For Production**: Set up a backend proxy
+  - Deploy a simple API endpoint that forwards requests to OpenAI
+  - Update the `whisperService.ts` to call your proxy instead
+  - This avoids CORS issues and keeps your API key secure
+
+**3. Network Connectivity**
+- Check your internet connection
+- Verify you can access `https://api.openai.com`
+- Check if corporate firewalls are blocking the API
+
+### Switching Between Transcription Modes
+
+The app supports two transcription methods:
+
+1. **OpenAI Whisper** (High Accuracy)
+   - Requires API key and costs $0.006/minute
+   - 99+ language support
+   - Better with accents and noisy environments
+   - May fail due to CORS in browser
+
+2. **Web Speech API** (Browser-Based)
+   - Free and built into modern browsers
+   - Works offline once loaded
+   - Good accuracy for clear speech
+   - Best supported in Chrome/Edge
+   - No CORS issues
+
+You can manually switch between modes using the toggle button in the voice recorder interface.
+
 ## 🏗️ Architecture
 
 ### Tech Stack

@@ -5,16 +5,28 @@ let openai: OpenAI | null = null
 function getOpenAIClient(): OpenAI | null {
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY
 
-  if (!apiKey) {
-    console.warn('OpenAI API key not found. Set VITE_OPENAI_API_KEY in your .env file.')
+  if (!apiKey || apiKey === 'sk-your-api-key-here') {
+    console.warn('OpenAI API key not found or not configured. Set VITE_OPENAI_API_KEY in your .env file.')
+    return null
+  }
+
+  if (!apiKey.startsWith('sk-')) {
+    console.error('Invalid OpenAI API key format. Key should start with "sk-"')
     return null
   }
 
   if (!openai) {
-    openai = new OpenAI({
-      apiKey,
-      dangerouslyAllowBrowser: true, // Required for client-side usage
-    })
+    try {
+      openai = new OpenAI({
+        apiKey,
+        dangerouslyAllowBrowser: true, // Required for client-side usage
+        // Note: This may fail due to CORS restrictions
+        // Consider using a backend proxy for production
+      })
+    } catch (error) {
+      console.error('Failed to initialize OpenAI client:', error)
+      return null
+    }
   }
 
   return openai
@@ -92,5 +104,22 @@ export async function transcribeAudio(audioBlob: Blob): Promise<string> {
 }
 
 export function isWhisperConfigured(): boolean {
-  return !!import.meta.env.VITE_OPENAI_API_KEY
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY
+  return !!(apiKey && apiKey !== 'sk-your-api-key-here' && apiKey.startsWith('sk-'))
+}
+
+export async function validateWhisperSetup(): Promise<{ valid: boolean; error?: string }> {
+  if (!isWhisperConfigured()) {
+    return {
+      valid: false,
+      error: 'OpenAI API key not configured. Using browser speech recognition instead.'
+    }
+  }
+
+  // Note: We can't actually test the API key without making a request
+  // and the OpenAI API doesn't support CORS for browser requests properly
+  return {
+    valid: true,
+    error: undefined
+  }
 }
