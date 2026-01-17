@@ -4,13 +4,15 @@ import { useState } from 'react'
 import { marked } from 'marked'
 import { db } from '../lib/db'
 import { formatDate, isSameDay, startOfDay, endOfDay, cn } from '../lib/utils'
-import type { Entry, EntryCategory, Transcription, DiaryEntry } from '../types'
+import type { Entry, EntryType, Transcription, DiaryEntry } from '../types'
 
-const categoryColors: Record<EntryCategory, string> = {
+const entryTypeColors: Partial<Record<EntryType, string>> = {
   journal: 'border-l-blue-500',
   todo: 'border-l-green-500',
   reminder: 'border-l-yellow-500',
   note: 'border-l-purple-500',
+  voice: 'border-l-gray-400',
+  diary: 'border-l-indigo-500',
 }
 
 export function CalendarView() {
@@ -146,6 +148,7 @@ export function CalendarView() {
     await db.entries.add({
       id: crypto.randomUUID(),
       type: 'note',
+      source: 'manual',
       title,
       content,
       date: selectedDate,
@@ -280,7 +283,7 @@ export function CalendarView() {
                       key={entry.id}
                       className={cn(
                         'bg-card border-l-4 border-border rounded-lg p-4',
-                        categoryColors[entry.type]
+                        entryTypeColors[entry.type] ?? 'border-l-border'
                       )}
                     >
                       <div className="flex items-start gap-3">
