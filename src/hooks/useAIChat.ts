@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { getAIInsights, type ChatMessage } from '../services/groqChatService'
 import { useSpeechRecognition } from './useSpeechRecognition'
-import { applyAIActions, appendToDiaryEntry, buildAIContextSummary } from '../services/aiActions'
+import { applyAIActions, appendToDiaryEntry, buildAIContextSummary, type AIAction } from '../services/aiActions'
 
 export interface AIChatMessage {
   role: 'user' | 'assistant'
   content: string
-  actions?: any[]
-  pendingActions?: any[]
+  actions?: AIAction[]
+  pendingActions?: AIAction[]
   rejectedActionIndices?: number[]
 }
 
@@ -67,13 +67,21 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
       const contextSummary = await buildAIContextSummary()
       const insight = await getAIInsights(userMessage, conversationHistory, contextSummary)
 
+      const pendingActions = insight.actions.length > 0 ? insight.actions : undefined
+      const missingDueActions = (pendingActions || []).filter(
+        (action) => (action.type === 'todo' || action.type === 'reminder') && !action.date
+      )
+      const followUpPrompt = missingDueActions.length > 0
+        ? `\n\nQuick question: when should I schedule ${missingDueActions.length === 1 ? `"${missingDueActions[0].title}"` : 'these items'}?`
+        : ''
+
       // Store actions as pending instead of auto-applying
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: insight.response,
-          pendingActions: insight.actions.length > 0 ? insight.actions : undefined,
+          content: `${insight.response}${followUpPrompt}`,
+          pendingActions,
           rejectedActionIndices: [],
         },
       ])
@@ -99,7 +107,7 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     }
   }
 
-  const handleAcceptAction = async (messageIndex: number, actionIndex: number, action: any) => {
+  const handleAcceptAction = async (messageIndex: number, actionIndex: number, action: AIAction) => {
     try {
       // Apply the action to the database
       const actionResult = await applyAIActions([action], new Date())
@@ -175,6 +183,29 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     }
   }
 
+  const handleUpdatePendingAction = (
+    messageIndex: number,
+    actionIndex: number,
+    updates: Partial<AIAction>
+  ) => {
+    setMessages((prev) =>
+      prev.map((msg, idx) => {
+        if (idx !== messageIndex || !msg.pendingActions) {
+          return msg
+        }
+
+        const nextPending = msg.pendingActions.map((action, i) =>
+          i === actionIndex ? { ...action, ...updates } : action
+        )
+
+        return {
+          ...msg,
+          pendingActions: nextPending,
+        }
+      })
+    )
+  }
+
   return {
     messages,
     input,
@@ -187,6 +218,7 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     handleAcceptAction,
     handleRejectAction,
     handleAcceptAll,
+    handleUpdatePendingAction,
     messagesEndRef,
     speechRecognition,
   }

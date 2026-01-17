@@ -152,10 +152,10 @@ export function AllEntries() {
 
       {/* Table */}
       <div className="border border-border rounded-lg overflow-hidden">
-        <table className="w-full">
+        <table className="w-full table-auto">
           <thead className="bg-muted/50 border-b border-border">
             <tr>
-              <th className="text-left p-3 font-medium">
+              <th className="text-left p-3 font-medium whitespace-nowrap">
                 <button
                   onClick={() => handleSort('date')}
                   className="flex items-center gap-1 hover:text-primary transition-colors"
@@ -164,25 +164,7 @@ export function AllEntries() {
                   {sortField === 'date' && <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>}
                 </button>
               </th>
-              <th className="text-left p-3 font-medium">
-                <button
-                  onClick={() => handleSort('type')}
-                  className="flex items-center gap-1 hover:text-primary transition-colors"
-                >
-                  Type
-                  {sortField === 'type' && <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>}
-                </button>
-              </th>
-              <th className="text-left p-3 font-medium">
-                <button
-                  onClick={() => handleSort('source')}
-                  className="flex items-center gap-1 hover:text-primary transition-colors"
-                >
-                  Source
-                  {sortField === 'source' && <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>}
-                </button>
-              </th>
-              <th className="text-left p-3 font-medium">
+              <th className="text-left p-3 font-medium w-full">
                 <button
                   onClick={() => handleSort('content')}
                   className="flex items-center gap-1 hover:text-primary transition-colors"
@@ -191,8 +173,26 @@ export function AllEntries() {
                   {sortField === 'content' && <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>}
                 </button>
               </th>
-              <th className="text-left p-3 font-medium">Tags</th>
-              <th className="text-right p-3 font-medium">Actions</th>
+              <th className="text-left p-3 font-medium whitespace-nowrap">
+                <button
+                  onClick={() => handleSort('type')}
+                  className="flex items-center gap-1 hover:text-primary transition-colors"
+                >
+                  Type
+                  {sortField === 'type' && <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>}
+                </button>
+              </th>
+              <th className="text-left p-3 font-medium whitespace-nowrap">Tags</th>
+              <th className="text-left p-3 font-medium whitespace-nowrap">
+                <button
+                  onClick={() => handleSort('source')}
+                  className="flex items-center gap-1 hover:text-primary transition-colors"
+                >
+                  Source
+                  {sortField === 'source' && <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>}
+                </button>
+              </th>
+              <th className="text-right p-3 font-medium whitespace-nowrap">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -206,7 +206,7 @@ export function AllEntries() {
               sortedEntries.map((entry) => (
                 <tr key={entry.id} className="hover:bg-muted/30 transition-colors">
                   {/* Date */}
-                  <td className="p-3 text-sm whitespace-nowrap">
+                  <td className="p-3 text-sm whitespace-nowrap align-top">
                     <div className="flex items-center gap-2">
                       <CalendarIcon className="w-4 h-4 text-muted-foreground" />
                       <div>
@@ -216,20 +216,6 @@ export function AllEntries() {
                         </div>
                       </div>
                     </div>
-                  </td>
-
-                  {/* Type */}
-                  <td className="p-3">
-                    <span className={cn('px-2 py-1 rounded text-xs font-medium', getTypeColor(entry.type))}>
-                      {entry.type}
-                    </span>
-                  </td>
-
-                  {/* Source */}
-                  <td className="p-3">
-                    <span className="text-sm text-muted-foreground">
-                      {getSourceBadge(entry.source)}
-                    </span>
                   </td>
 
                   {/* Content */}
@@ -263,8 +249,15 @@ export function AllEntries() {
                     </div>
                   </td>
 
+                  {/* Type */}
+                  <td className="p-3 whitespace-nowrap align-top">
+                    <span className={cn('px-2 py-1 rounded text-xs font-medium', getTypeColor(entry.type))}>
+                      {entry.type}
+                    </span>
+                  </td>
+
                   {/* Tags */}
-                  <td className="p-3">
+                  <td className="p-3 align-top">
                     {entry.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {entry.tags.map((tag, i) => (
@@ -280,8 +273,15 @@ export function AllEntries() {
                     )}
                   </td>
 
+                  {/* Source */}
+                  <td className="p-3 whitespace-nowrap align-top">
+                    <span className="text-sm text-muted-foreground">
+                      {getSourceBadge(entry.source)}
+                    </span>
+                  </td>
+
                   {/* Actions */}
-                  <td className="p-3 text-right">
+                  <td className="p-3 text-right whitespace-nowrap align-top">
                     <button
                       onClick={() => handleDelete(entry.id)}
                       className="p-2 hover:bg-destructive/10 hover:text-destructive rounded transition-colors"
