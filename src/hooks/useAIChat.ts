@@ -80,30 +80,6 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     return { pendingActions, followUpPrompt }
   }
 
-  const extractLocalDate = (message: string, fallback = new Date()) => {
-    const lower = message.toLowerCase()
-    const base = new Date(fallback)
-    if (lower.includes('tomorrow')) {
-      base.setDate(base.getDate() + 1)
-    } else if (lower.includes('today')) {
-      base.setHours(base.getHours())
-    }
-    return base
-  }
-
-  const extractTimeFromMessage = (message: string) => {
-    const match = message.match(/\b(?:before|by|at)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i)
-    if (!match) return null
-    const hour = Number(match[1])
-    const minute = match[2] ? Number(match[2]) : 0
-    const meridiem = match[3].toLowerCase()
-    let adjustedHour = hour % 12
-    if (meridiem === 'pm') {
-      adjustedHour += 12
-    }
-    return { hour: adjustedHour, minute }
-  }
-
   const deriveTags = (text: string) => {
     const stopwords = new Set(['the', 'and', 'for', 'with', 'this', 'that', 'from', 'have', 'your', 'you', 'today'])
     return Array.from(
@@ -137,87 +113,38 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
   }
 
   const normalizeActions = (message: string, actions: AIAction[]) => {
-    const lower = message.toLowerCase()
-    const baseDate = extractLocalDate(message)
-    const time = extractTimeFromMessage(message)
-    const next = [...actions]
+    // REMOVED: Manual regex parsing and supplementary action creation
+    // The Groq AI should intelligently parse ALL tasks from the user's message
+    // This function now ONLY enriches what the AI returned (tags, priorities)
 
-    const hasReply = actions.some((action) => /reply|respond|email/i.test(`${action.title} ${action.content}`))
-    if ((lower.includes('reply') || lower.includes('email')) && !hasReply) {
-      const nameMatch = message.match(/reply to\s+([a-zA-Z]+)(?:'s)?\s+email/i)
-      const person = nameMatch ? nameMatch[1] : 'their'
-      // Match either "on the subject of X" or "about X" or just extract context after "email"
-      const subjectMatch = message.match(/(?:on the subject(?:\s+of)?\s+|about\s+)(.+?)(?:\s+before|\s+by|\s+at|\s+and|$)/i) ||
-        message.match(/email\s+(?:on the subject|about)?\s*(.+?)(?:\s+before|\s+by|\s+at|\s+and|$)/i)
-      const subject = subjectMatch ? subjectMatch[1].trim() : null
-      const replyDate = new Date(baseDate)
-      if (time) {
-        replyDate.setHours(time.hour, time.minute, 0, 0)
-      }
-      const replyTitle = `Reply to ${person}'s email`
-      const replyContent = subject ? `Reply to ${person}'s email about ${subject}` : `Reply to ${person}'s email`
-      next.push({
-        type: 'reminder',
-        title: replyTitle,
-        content: replyContent,
-        date: time ? replyDate : undefined,
-        tags: ['email', person.toLowerCase(), ...(subject ? deriveTags(subject) : [])].slice(0, 3),
-        priority: inferPriority(message, replyTitle, replyContent, !!time),
-      })
-    }
+    console.log('[normalizeActions] Input actions from AI:', actions)
+    console.log('[normalizeActions] Message:', message)
 
-    const hasCall = actions.some((action) => /call/i.test(`${action.title} ${action.content}`))
-    const callMatch = message.match(/call\s+([a-zA-Z]+)/i)
-    if (callMatch && !hasCall) {
-      const person = callMatch[1]
-      const callTitle = `Call ${person}`
-      next.push({
-        type: 'reminder',
-        title: callTitle,
-        content: callTitle,
-        date: undefined,
-        tags: ['call', person.toLowerCase()],
-        priority: inferPriority(message, callTitle, callTitle, false),
-      })
-    }
-
-    const hasWork = actions.some((action) => /work on|contract/i.test(`${action.title} ${action.content}`))
-    const workMatch = message.match(/work on\s+(.+?)(?:\s+and|,|$)/i)
-    if (workMatch && !hasWork) {
-      const task = workMatch[1].trim().replace(/\.$/, '')
-      const workTitle = `Work on ${task}`
-      const workDate = /today/i.test(message) ? baseDate : undefined
-      next.push({
-        type: 'todo',
-        title: workTitle,
-        content: workTitle,
-        date: workDate,
-        tags: deriveTags(task),
-        priority: inferPriority(message, workTitle, workTitle, false),
-      })
-    }
-
-    return next.map((action) => {
-      const titleContent = `${action.title} ${action.content}`
+    // Only enrich the actions the AI returned - no manual parsing
+    return actions.map((action) => {
       let updatedAction = { ...action }
 
-      // Apply date if missing
-      if (!action.date && time && /reply|respond|email/i.test(titleContent)) {
-        const dated = new Date(baseDate)
-        dated.setHours(time.hour, time.minute, 0, 0)
-        updatedAction.date = dated
-      } else if (!action.date && /today/i.test(message) && !/reply|respond|email/i.test(titleContent)) {
-        const dated = new Date(baseDate)
-        dated.setHours(9, 0, 0, 0)
-        updatedAction.date = dated
-      }
-
-      // Infer priority if missing
+      // Infer priority if missing (AI should set this, but fallback just in case)
       if (!updatedAction.priority) {
-        updatedAction.priority = inferPriority(message, action.title, action.content, !!updatedAction.date)
+        updatedAction.priority = inferPriority(message, action.title, action.content, !!action.date)
       }
 
+      // Ensure tags are present
       return ensureTags(updatedAction)
+    })
+  }
+
+  // Add logging just before normalizeActions is called in sendMessage
+  const logActions = (label: string, actions: AIAction[]) => {
+    console.log(`[${label}] Total actions:`, actions.length)
+    actions.forEach((action, i) => {
+      console.log(`[${label}] Action ${i + 1}:`, {
+        type: action.type,
+        title: action.title,
+        date: action.date,
+        priority: action.priority,
+        tags: action.tags
+      })
     })
   }
 
@@ -242,7 +169,14 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
       const contextSummary = await buildAIContextSummary()
       const insight = await getAIInsights(trimmedMessage, conversationHistory, contextSummary)
 
+      console.log('[useAIChat] AI returned actions:', insight.actions)
+      logActions('Before normalize', insight.actions)
+
       const normalizedActions = normalizeActions(trimmedMessage, insight.actions)
+
+      console.log('[useAIChat] After normalization:', normalizedActions)
+      logActions('After normalize', normalizedActions)
+
       const { pendingActions, followUpPrompt } = buildPendingState(normalizedActions)
 
       // Store actions as pending instead of auto-applying
