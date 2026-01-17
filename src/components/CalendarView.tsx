@@ -135,7 +135,8 @@ export function CalendarView() {
   const days = getDaysInMonth(currentMonth)
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-  const renderDiaryHtml = (entry: DiaryEntry) => marked.parse(entry.content || '')
+  const renderDiaryHtml = (entry: DiaryEntry) =>
+    marked.parse(entry.content || '', { async: false })
 
   const handleAddNote = async () => {
     const content = newNoteContent.trim()
