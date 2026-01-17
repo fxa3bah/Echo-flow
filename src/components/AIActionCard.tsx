@@ -30,6 +30,11 @@ export function AIActionCard({ action, onAccept, onReject, isRejected }: AIActio
   const [editedTags, setEditedTags] = useState((action.tags || []).join(', '))
 
   const Icon = actionIcons[action.type]
+  const formatDateTimeLocal = (date: Date) => {
+    const offset = date.getTimezoneOffset()
+    const local = new Date(date.getTime() - offset * 60 * 1000)
+    return local.toISOString().slice(0, 16)
+  }
 
   const handleSave = () => {
     const updatedAction = {
@@ -83,7 +88,7 @@ export function AIActionCard({ action, onAccept, onReject, isRejected }: AIActio
               <label className="block text-xs font-medium mb-1">Date</label>
               <input
                 type="datetime-local"
-                value={editedAction.date ? new Date(editedAction.date).toISOString().slice(0, 16) : ''}
+                value={editedAction.date ? formatDateTimeLocal(new Date(editedAction.date)) : ''}
                 onChange={(e) =>
                   setEditedAction({ ...editedAction, date: e.target.value ? new Date(e.target.value) : undefined })
                 }

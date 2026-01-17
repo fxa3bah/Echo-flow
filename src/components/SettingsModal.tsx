@@ -159,10 +159,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">Ctrl + T</kbd>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-border">
-                <span className="text-muted-foreground">Calendar</span>
-                <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">Ctrl + C</kbd>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-border">
                 <span className="text-muted-foreground">Eisenhower Matrix</span>
                 <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">Ctrl + M</kbd>
               </div>
@@ -185,6 +181,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
               Sync your data with OneDrive or Google Drive. Select a folder on your computer that's synced with your cloud storage.
+              On mobile, you can pick a file location through the system file picker.
             </p>
 
             {syncFolderName ? (
