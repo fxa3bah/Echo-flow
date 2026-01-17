@@ -75,6 +75,14 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
         ? `\n\nQuick question: when should I schedule ${missingDueActions.length === 1 ? `"${missingDueActions[0].title}"` : 'these items'}?`
         : ''
 
+      const pendingActions = insight.actions.length > 0 ? insight.actions : undefined
+      const missingDueActions = (pendingActions || []).filter(
+        (action) => (action.type === 'todo' || action.type === 'reminder') && !action.date
+      )
+      const followUpPrompt = missingDueActions.length > 0
+        ? `\n\nQuick question: when should I schedule ${missingDueActions.length === 1 ? `"${missingDueActions[0].title}"` : 'these items'}?`
+        : ''
+
       // Store actions as pending instead of auto-applying
       setMessages((prev) => [
         ...prev,
