@@ -67,6 +67,11 @@ export async function getAIInsights(
 3. Respond in a friendly, helpful manner
 4. Use the provided app context to avoid duplicates and update existing items when appropriate
 5. When you identify actionable items, format them as JSON at the end of your response
+6. If a todo/reminder has no clear due date or time, ask a concise follow-up question and suggest 2-3 quick options the user can pick from
+7. When including dates, always use ISO 8601 with the user's timezone offset (never use "Z" unless the user explicitly says UTC)
+8. Never merge unrelated tasks into a single action; create separate actions for each distinct person, deliverable, or verb (e.g., "call Daniel" must be separate from "work on Southern Tide contract")
+9. If the user specifies an exact time (e.g., "by 5pm"), set the action date to that exact local time
+10. Set priority when urgency/importance is implied (e.g., "urgent", "asap", "deadline", "contract", "client")
 
 Response format:
 [Your natural response to the user]
@@ -96,7 +101,7 @@ AI: "Got it! I'll create a reminder for you to call Daniel tomorrow at 10am abou
     "type": "reminder",
     "title": "Call Daniel about project",
     "content": "Call Daniel tomorrow at 10am about the project",
-    "date": "${new Date(Date.now() + 86400000).toISOString()}",
+    "date": "2026-01-19T10:00:00+03:00",
     "tags": ["call", "project"]
   }]
 }
@@ -111,7 +116,7 @@ AI: "That's wonderful news! Sounds like you had a very productive day. I'll save
     "type": "journal",
     "title": "Amazing day with presentation success",
     "content": "Today was amazing! I finished my presentation and got great feedback.",
-    "date": "${new Date().toISOString()}",
+    "date": "2026-01-18T09:00:00+03:00",
     "tags": ["success", "presentation"]
   }]
 }
@@ -120,8 +125,18 @@ AI: "That's wonderful news! Sounds like you had a very productive day. I'll save
 Be conversational, helpful, and always extract actionable items when present.`
   }
 
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const localTimestamp = new Date().toLocaleString(undefined, {
+    timeZone,
+    timeZoneName: 'short',
+  })
+
   const messages: ChatMessage[] = [
     systemPrompt,
+    {
+      role: 'system',
+      content: `User timezone: ${timeZone}. Current local date/time: ${localTimestamp}.`,
+    },
     ...(contextSummary
       ? [{ role: 'system' as const, content: `App context:\n${contextSummary}` }]
       : []),
@@ -135,12 +150,24 @@ Be conversational, helpful, and always extract actionable items when present.`
   const jsonMatch = response.match(/---JSON---\n([\s\S]*?)\n---END---/)
   let actions: AIInsight['actions'] = []
 
+  const parseAIActionDate = (dateValue?: string) => {
+    if (!dateValue) return undefined
+    if (dateValue.endsWith('Z')) {
+      const trimmed = dateValue.replace('Z', '')
+      const [datePart, timePart = '00:00:00'] = trimmed.split('T')
+      const [year, month, day] = datePart.split('-').map(Number)
+      const [hour = 0, minute = 0, second = 0] = timePart.split(':').map(Number)
+      return new Date(year, (month || 1) - 1, day || 1, hour, minute, second)
+    }
+    return new Date(dateValue)
+  }
+
   if (jsonMatch) {
     try {
       const parsed = JSON.parse(jsonMatch[1])
       actions = parsed.actions.map((action: any) => ({
         ...action,
-        date: action.date ? new Date(action.date) : undefined,
+        date: parseAIActionDate(action.date),
       }))
     } catch (error) {
       console.error('Failed to parse AI actions:', error)
