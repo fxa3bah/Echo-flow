@@ -67,6 +67,7 @@ export async function getAIInsights(
 3. Respond in a friendly, helpful manner
 4. Use the provided app context to avoid duplicates and update existing items when appropriate
 5. When you identify actionable items, format them as JSON at the end of your response
+6. If a todo/reminder has no clear due date or time, ask a concise follow-up question and suggest 2-3 quick options the user can pick from
 
 Response format:
 [Your natural response to the user]
