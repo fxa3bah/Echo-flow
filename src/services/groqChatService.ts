@@ -68,6 +68,7 @@ export async function getAIInsights(
 4. Use the provided app context to avoid duplicates and update existing items when appropriate
 5. When you identify actionable items, format them as JSON at the end of your response
 6. If a todo/reminder has no clear due date or time, ask a concise follow-up question and suggest 2-3 quick options the user can pick from
+7. When including dates, always use ISO 8601 with the user's timezone offset (never use "Z" unless the user explicitly says UTC)
 
 Response format:
 [Your natural response to the user]
@@ -121,8 +122,18 @@ AI: "That's wonderful news! Sounds like you had a very productive day. I'll save
 Be conversational, helpful, and always extract actionable items when present.`
   }
 
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const localTimestamp = new Date().toLocaleString(undefined, {
+    timeZone,
+    timeZoneName: 'short',
+  })
+
   const messages: ChatMessage[] = [
     systemPrompt,
+    {
+      role: 'system',
+      content: `User timezone: ${timeZone}. Current local date/time: ${localTimestamp}.`,
+    },
     ...(contextSummary
       ? [{ role: 'system' as const, content: `App context:\n${contextSummary}` }]
       : []),

@@ -38,11 +38,6 @@ function App() {
       handler: () => setCurrentView('entries'),
     },
     {
-      key: 'c',
-      ctrlKey: true,
-      handler: () => setCurrentView('calendar'),
-    },
-    {
       key: 'm',
       ctrlKey: true,
       handler: () => setCurrentView('matrix'),

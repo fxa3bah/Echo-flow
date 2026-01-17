@@ -86,12 +86,8 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
         },
       ])
 
-      // Auto-append chat to diary only if no note/journal actions
-      const noteActionExists = insight.actions.some(
-        (action) => action.type === 'note' || action.type === 'journal'
-      )
-
-      if (!noteActionExists) {
+      // Auto-append chat to diary only when no actionable items were created
+      if (insight.actions.length === 0) {
         await appendToDiaryEntry(new Date(), `### AI Chat\n${userMessage}`)
       }
     } catch (error: any) {
