@@ -69,6 +69,9 @@ export async function getAIInsights(
 5. When you identify actionable items, format them as JSON at the end of your response
 6. If a todo/reminder has no clear due date or time, ask a concise follow-up question and suggest 2-3 quick options the user can pick from
 7. When including dates, always use ISO 8601 with the user's timezone offset (never use "Z" unless the user explicitly says UTC)
+8. Never merge unrelated tasks into a single action; create separate actions for each distinct person, deliverable, or verb (e.g., "call Daniel" must be separate from "work on Southern Tide contract")
+9. If the user specifies an exact time (e.g., "by 5pm"), set the action date to that exact local time
+10. Set priority when urgency/importance is implied (e.g., "urgent", "asap", "deadline", "contract", "client")
 
 Response format:
 [Your natural response to the user]
@@ -98,7 +101,7 @@ AI: "Got it! I'll create a reminder for you to call Daniel tomorrow at 10am abou
     "type": "reminder",
     "title": "Call Daniel about project",
     "content": "Call Daniel tomorrow at 10am about the project",
-    "date": "${new Date(Date.now() + 86400000).toISOString()}",
+    "date": "2026-01-19T10:00:00+03:00",
     "tags": ["call", "project"]
   }]
 }
@@ -113,7 +116,7 @@ AI: "That's wonderful news! Sounds like you had a very productive day. I'll save
     "type": "journal",
     "title": "Amazing day with presentation success",
     "content": "Today was amazing! I finished my presentation and got great feedback.",
-    "date": "${new Date().toISOString()}",
+    "date": "2026-01-18T09:00:00+03:00",
     "tags": ["success", "presentation"]
   }]
 }
