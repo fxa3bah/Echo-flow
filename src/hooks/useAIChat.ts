@@ -80,6 +80,103 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     return { pendingActions, followUpPrompt }
   }
 
+  const extractLocalDate = (message: string, fallback = new Date()) => {
+    const lower = message.toLowerCase()
+    const base = new Date(fallback)
+    if (lower.includes('tomorrow')) {
+      base.setDate(base.getDate() + 1)
+    } else if (lower.includes('today')) {
+      base.setHours(base.getHours())
+    }
+    return base
+  }
+
+  const extractTimeFromMessage = (message: string) => {
+    const match = message.match(/\b(?:before|by|at)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i)
+    if (!match) return null
+    const hour = Number(match[1])
+    const minute = match[2] ? Number(match[2]) : 0
+    const meridiem = match[3].toLowerCase()
+    let adjustedHour = hour % 12
+    if (meridiem === 'pm') {
+      adjustedHour += 12
+    }
+    return { hour: adjustedHour, minute }
+  }
+
+  const deriveTags = (text: string) => {
+    const stopwords = new Set(['the', 'and', 'for', 'with', 'this', 'that', 'from', 'have', 'your', 'you', 'today'])
+    return Array.from(
+      new Set(
+        text
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, '')
+          .split(/\s+/)
+          .filter((word) => word.length > 3 && !stopwords.has(word))
+      )
+    ).slice(0, 3)
+  }
+
+  const ensureTags = (action: AIAction) => {
+    if (action.tags && action.tags.length > 0) return action
+    const tags = deriveTags(`${action.title} ${action.content}`)
+    return { ...action, tags }
+  }
+
+  const normalizeActions = (message: string, actions: AIAction[]) => {
+    const lower = message.toLowerCase()
+    const baseDate = extractLocalDate(message)
+    const time = extractTimeFromMessage(message)
+    const next = [...actions]
+
+    const hasReply = actions.some((action) => /reply|respond|email/i.test(`${action.title} ${action.content}`))
+    if ((lower.includes('reply') || lower.includes('email')) && !hasReply) {
+      const nameMatch = message.match(/reply to\s+([a-zA-Z]+)(?:'s)?\s+email/i)
+      const person = nameMatch ? nameMatch[1] : 'their'
+      const replyDate = new Date(baseDate)
+      if (time) {
+        replyDate.setHours(time.hour, time.minute, 0, 0)
+      }
+      next.push({
+        type: 'todo',
+        title: `Reply to ${person}'s email`,
+        content: `Reply to ${person}'s email`,
+        date: time ? replyDate : undefined,
+        tags: ['email', person.toLowerCase()],
+      })
+    }
+
+    const hasCall = actions.some((action) => /call/i.test(`${action.title} ${action.content}`))
+    const callMatch = message.match(/call\s+([a-zA-Z]+)/i)
+    if (callMatch && !hasCall) {
+      const person = callMatch[1]
+      next.push({
+        type: 'reminder',
+        title: `Call ${person}`,
+        content: `Call ${person}`,
+        date: undefined,
+        tags: ['call', person.toLowerCase()],
+      })
+    }
+
+    return next.map((action) => {
+      const titleContent = `${action.title} ${action.content}`
+      if (!action.date && time && /reply|respond|email/i.test(titleContent)) {
+        const dated = new Date(baseDate)
+        dated.setHours(time.hour, time.minute, 0, 0)
+        return ensureTags({ ...action, date: dated })
+      }
+
+      if (!action.date && /today/i.test(message)) {
+        const dated = new Date(baseDate)
+        dated.setHours(9, 0, 0, 0)
+        return ensureTags({ ...action, date: dated })
+      }
+
+      return ensureTags(action)
+    })
+  }
+
   const sendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isLoading) return
 
@@ -101,7 +198,8 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
       const contextSummary = await buildAIContextSummary()
       const insight = await getAIInsights(trimmedMessage, conversationHistory, contextSummary)
 
-      const { pendingActions, followUpPrompt } = buildPendingState(insight.actions)
+      const normalizedActions = normalizeActions(trimmedMessage, insight.actions)
+      const { pendingActions, followUpPrompt } = buildPendingState(normalizedActions)
 
       // Store actions as pending instead of auto-applying
       setMessages((prev) => [
