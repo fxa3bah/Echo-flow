@@ -123,6 +123,19 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     return { ...action, tags }
   }
 
+  const inferPriority = (message: string, title: string, content: string, hasTime: boolean) => {
+    const fullText = `${message} ${title} ${content}`.toLowerCase()
+
+    // Urgent + Important keywords
+    const isUrgent = /today|urgent|asap|immediately|deadline|now|tonight|this morning|this afternoon/.test(fullText) || hasTime
+    const isImportant = /contract|client|meeting|deliverable|project|important|critical|essential|boss|manager/.test(fullText)
+
+    if (isUrgent && isImportant) return 'urgent-important'
+    if (!isUrgent && isImportant) return 'not-urgent-important'
+    if (isUrgent && !isImportant) return 'urgent-not-important'
+    return 'not-urgent-not-important'
+  }
+
   const normalizeActions = (message: string, actions: AIAction[]) => {
     const lower = message.toLowerCase()
     const baseDate = extractLocalDate(message)
@@ -133,18 +146,23 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     if ((lower.includes('reply') || lower.includes('email')) && !hasReply) {
       const nameMatch = message.match(/reply to\s+([a-zA-Z]+)(?:'s)?\s+email/i)
       const person = nameMatch ? nameMatch[1] : 'their'
-      const subjectMatch = message.match(/on the subject\s+of\s+(.+?)(?:\s+before|\s+by|\s+at|$)/i)
+      // Match either "on the subject of X" or "about X" or just extract context after "email"
+      const subjectMatch = message.match(/(?:on the subject(?:\s+of)?\s+|about\s+)(.+?)(?:\s+before|\s+by|\s+at|\s+and|$)/i) ||
+        message.match(/email\s+(?:on the subject|about)?\s*(.+?)(?:\s+before|\s+by|\s+at|\s+and|$)/i)
       const subject = subjectMatch ? subjectMatch[1].trim() : null
       const replyDate = new Date(baseDate)
       if (time) {
         replyDate.setHours(time.hour, time.minute, 0, 0)
       }
+      const replyTitle = `Reply to ${person}'s email`
+      const replyContent = subject ? `Reply to ${person}'s email about ${subject}` : `Reply to ${person}'s email`
       next.push({
-        type: 'todo',
-        title: `Reply to ${person}'s email`,
-        content: subject ? `Reply to ${person}'s email about ${subject}` : `Reply to ${person}'s email`,
+        type: 'reminder',
+        title: replyTitle,
+        content: replyContent,
         date: time ? replyDate : undefined,
         tags: ['email', person.toLowerCase(), ...(subject ? deriveTags(subject) : [])].slice(0, 3),
+        priority: inferPriority(message, replyTitle, replyContent, !!time),
       })
     }
 
@@ -152,12 +170,14 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     const callMatch = message.match(/call\s+([a-zA-Z]+)/i)
     if (callMatch && !hasCall) {
       const person = callMatch[1]
+      const callTitle = `Call ${person}`
       next.push({
         type: 'reminder',
-        title: `Call ${person}`,
-        content: `Call ${person}`,
+        title: callTitle,
+        content: callTitle,
         date: undefined,
         tags: ['call', person.toLowerCase()],
+        priority: inferPriority(message, callTitle, callTitle, false),
       })
     }
 
@@ -165,30 +185,39 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     const workMatch = message.match(/work on\s+(.+?)(?:\s+and|,|$)/i)
     if (workMatch && !hasWork) {
       const task = workMatch[1].trim().replace(/\.$/, '')
+      const workTitle = `Work on ${task}`
+      const workDate = /today/i.test(message) ? baseDate : undefined
       next.push({
         type: 'todo',
-        title: `Work on ${task}`,
-        content: `Work on ${task}`,
-        date: /today/i.test(message) ? baseDate : undefined,
+        title: workTitle,
+        content: workTitle,
+        date: workDate,
         tags: deriveTags(task),
+        priority: inferPriority(message, workTitle, workTitle, false),
       })
     }
 
     return next.map((action) => {
       const titleContent = `${action.title} ${action.content}`
+      let updatedAction = { ...action }
+
+      // Apply date if missing
       if (!action.date && time && /reply|respond|email/i.test(titleContent)) {
         const dated = new Date(baseDate)
         dated.setHours(time.hour, time.minute, 0, 0)
-        return ensureTags({ ...action, date: dated })
-      }
-
-      if (!action.date && /today/i.test(message) && !/reply|respond|email/i.test(titleContent)) {
+        updatedAction.date = dated
+      } else if (!action.date && /today/i.test(message) && !/reply|respond|email/i.test(titleContent)) {
         const dated = new Date(baseDate)
         dated.setHours(9, 0, 0, 0)
-        return ensureTags({ ...action, date: dated })
+        updatedAction.date = dated
       }
 
-      return ensureTags(action)
+      // Infer priority if missing
+      if (!updatedAction.priority) {
+        updatedAction.priority = inferPriority(message, action.title, action.content, !!updatedAction.date)
+      }
+
+      return ensureTags(updatedAction)
     })
   }
 

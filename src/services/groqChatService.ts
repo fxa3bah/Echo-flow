@@ -70,8 +70,17 @@ export async function getAIInsights(
 6. If a todo/reminder has no clear due date or time, ask a concise follow-up question and suggest 2-3 quick options the user can pick from
 7. When including dates, always use ISO 8601 with the user's timezone offset (never use "Z" unless the user explicitly says UTC)
 8. Never merge unrelated tasks into a single action; create separate actions for each distinct person, deliverable, or verb (e.g., "call Daniel" must be separate from "work on Southern Tide contract")
-9. If the user specifies an exact time (e.g., "by 5pm"), set the action date to that exact local time
-10. Set priority when urgency/importance is implied (e.g., "urgent", "asap", "deadline", "contract", "client")
+9. If the user specifies an exact time (e.g., "by 5pm", "before 6pm"), set the action date to that exact local time
+10. ALWAYS set priority based on these STRICT rules:
+   - urgent-important: Contract work, client deliverables, items with "today"/"urgent"/"asap"/"deadline" keywords, health/safety issues
+   - not-urgent-important: Planning, learning, relationship building, items with "this week"/"next week"
+   - urgent-not-important: Interruptions, some emails, items with "quick" but not critical
+   - not-urgent-not-important: Busy work, time wasters, vague future items
+11. ALWAYS categorize types correctly:
+   - todo: Work tasks, projects, things to complete
+   - reminder: Time-sensitive items with specific times/deadlines, emails to reply to, calls to make
+   - note: Information to save, reference material
+   - journal: Personal reflections, feelings, daily experiences
 
 Response format:
 [Your natural response to the user]
@@ -102,8 +111,35 @@ AI: "Got it! I'll create a reminder for you to call Daniel tomorrow at 10am abou
     "title": "Call Daniel about project",
     "content": "Call Daniel tomorrow at 10am about the project",
     "date": "2026-01-19T10:00:00+03:00",
+    "priority": "urgent-important",
     "tags": ["call", "project"]
   }]
+}
+---END---
+
+User: "Work on Southern Tide Contract today and reply to Tyler's email before 6pm"
+AI: "I'll set up those tasks for you - working on the Southern Tide Contract and replying to Tyler's email by 6pm.
+
+---JSON---
+{
+  "actions": [
+    {
+      "type": "todo",
+      "title": "Work on Southern Tide Contract",
+      "content": "Work on Southern Tide Contract today",
+      "date": "2026-01-18T09:00:00+03:00",
+      "priority": "urgent-important",
+      "tags": ["contract", "Southern Tide"]
+    },
+    {
+      "type": "reminder",
+      "title": "Reply to Tyler's email",
+      "content": "Reply to Tyler's email before 6pm",
+      "date": "2026-01-18T18:00:00+03:00",
+      "priority": "urgent-important",
+      "tags": ["email", "Tyler"]
+    }
+  ]
 }
 ---END---
 
