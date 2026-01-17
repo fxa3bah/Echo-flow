@@ -46,16 +46,16 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     }
   }
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return
+  const sendMessage = async (userMessage: string) => {
+    if (!userMessage.trim() || isLoading) return
 
-    const userMessage = input.trim()
+    const trimmedMessage = userMessage.trim()
     setInput('')
     speechRecognition.resetTranscript()
     setIsListening(false)
     speechRecognition.stopListening()
 
-    setMessages((prev) => [...prev, { role: 'user', content: userMessage }])
+    setMessages((prev) => [...prev, { role: 'user', content: trimmedMessage }])
     setIsLoading(true)
 
     try {
@@ -65,7 +65,15 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
       }))
 
       const contextSummary = await buildAIContextSummary()
-      const insight = await getAIInsights(userMessage, conversationHistory, contextSummary)
+      const insight = await getAIInsights(trimmedMessage, conversationHistory, contextSummary)
+
+      const pendingActions = insight.actions.length > 0 ? insight.actions : undefined
+      const missingDueActions = (pendingActions || []).filter(
+        (action) => (action.type === 'todo' || action.type === 'reminder') && !action.date
+      )
+      const followUpPrompt = missingDueActions.length > 0
+        ? `\n\nQuick question: when should I schedule ${missingDueActions.length === 1 ? `"${missingDueActions[0].title}"` : 'these items'}?`
+        : ''
 
       const pendingActions = insight.actions.length > 0 ? insight.actions : undefined
       const missingDueActions = (pendingActions || []).filter(
@@ -88,7 +96,7 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
 
       // Auto-append chat to diary only when no actionable items were created
       if (insight.actions.length === 0) {
-        await appendToDiaryEntry(new Date(), `### AI Chat\n${userMessage}`)
+        await appendToDiaryEntry(new Date(), `### AI Chat\n${trimmedMessage}`)
       }
     } catch (error: any) {
       setMessages((prev) => [
@@ -101,6 +109,16 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return
+    await sendMessage(input)
+  }
+
+  const handleSendMessage = async (message: string) => {
+    if (isLoading) return
+    await sendMessage(message)
   }
 
   const handleAcceptAction = async (messageIndex: number, actionIndex: number, action: AIAction) => {
@@ -215,6 +233,7 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     handleRejectAction,
     handleAcceptAll,
     handleUpdatePendingAction,
+    handleSendMessage,
     messagesEndRef,
     speechRecognition,
   }

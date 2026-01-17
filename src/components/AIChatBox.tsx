@@ -19,6 +19,7 @@ export function AIChatBox() {
     handleRejectAction,
     handleAcceptAll,
     handleUpdatePendingAction,
+    handleSendMessage,
     messagesEndRef,
     speechRecognition,
   } = useAIChat({
@@ -29,6 +30,18 @@ export function AIChatBox() {
       },
     ],
   })
+
+  const quickPrompts = [
+    'How does my day look?',
+    'What are my top priorities today?',
+    'Summarize what is due today.',
+    'Show me urgent items I should do first.',
+  ]
+
+  const handleQuickPrompt = (prompt: string) => {
+    setInput(prompt)
+    handleSendMessage(prompt)
+  }
 
   const quickDueOptions = [
     {
@@ -71,6 +84,17 @@ export function AIChatBox() {
       </div>
 
       <div className="bg-muted/30 rounded-lg p-3 max-h-96 overflow-y-auto space-y-3">
+        <div className="flex flex-wrap gap-2">
+          {quickPrompts.map((prompt) => (
+            <button
+              key={prompt}
+              onClick={() => handleQuickPrompt(prompt)}
+              className="text-xs px-3 py-1.5 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
         {messages.map((message, messageIndex) => (
           <div key={messageIndex} className="space-y-2">
             <div
