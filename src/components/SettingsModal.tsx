@@ -1,5 +1,7 @@
-import { X, FileJson, FileText } from 'lucide-react'
+import { X, FileJson, FileText, Upload, Download, FolderSync, Cloud, Check } from 'lucide-react'
+import { useState, useRef } from 'react'
 import { exportAsJSON, exportAsText } from '../lib/export'
+import { downloadDataAsFile, importData, selectSyncFolder, saveToSyncFolder, loadFromSyncFolder, startAutoSync, isSyncFolderSet, getLastSyncTime } from '../services/dataSync'
 import { cn } from '../lib/utils'
 
 interface SettingsModalProps {
@@ -8,6 +10,13 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+  const [importStatus, setImportStatus] = useState<string | null>(null)
+  const [syncStatus, setSyncStatus] = useState<string | null>(null)
+  const [syncing, setSyncing] = useState(false)
+  const [syncFolderName, setSyncFolderName] = useState<string | null>(isSyncFolderSet() ? localStorage.getItem('syncFolderName') : null)
+  const [lastSync, setLastSync] = useState<string | null>(getLastSyncTime())
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   if (!isOpen) return null
 
   const handleExportJSON = async () => {
@@ -16,6 +25,101 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   const handleExportText = async () => {
     await exportAsText()
+  }
+
+  const handleDownloadBackup = async () => {
+    await downloadDataAsFile()
+    setSyncStatus('Backup downloaded successfully!')
+    setTimeout(() => setSyncStatus(null), 3000)
+  }
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      const text = await file.text()
+      const result = await importData(text)
+
+      if (result.success) {
+        setImportStatus(
+          `✓ Imported ${result.imported.transcriptions} transcriptions, ` +
+          `${result.imported.entries} entries, and ${result.imported.diaryEntries} diary entries!`
+        )
+      } else {
+        setImportStatus(`✗ Import failed: ${result.error}`)
+      }
+
+      setTimeout(() => setImportStatus(null), 5000)
+    } catch (error: any) {
+      setImportStatus(`✗ Error: ${error.message}`)
+      setTimeout(() => setImportStatus(null), 5000)
+    }
+
+    // Reset file input
+    event.target.value = ''
+  }
+
+  const handleSelectSyncFolder = async () => {
+    const result = await selectSyncFolder()
+
+    if (result.success) {
+      const folderName = localStorage.getItem('syncFolderName')
+      setSyncFolderName(folderName)
+      setSyncStatus('✓ Sync folder selected! Auto-sync enabled.')
+      startAutoSync(5) // Auto-sync every 5 minutes
+
+      // Do initial sync
+      await handleSaveToCloud()
+    } else {
+      setSyncStatus(`✗ Error: ${result.error}`)
+    }
+
+    setTimeout(() => setSyncStatus(null), 5000)
+  }
+
+  const handleSaveToCloud = async () => {
+    setSyncing(true)
+    setSyncStatus('Saving to cloud...')
+
+    const result = await saveToSyncFolder()
+
+    if (result.success) {
+      setLastSync(getLastSyncTime())
+      setSyncStatus('✓ Saved to cloud successfully!')
+    } else {
+      setSyncStatus(`✗ Error: ${result.error}`)
+    }
+
+    setSyncing(false)
+    setTimeout(() => setSyncStatus(null), 5000)
+  }
+
+  const handleLoadFromCloud = async () => {
+    setSyncing(true)
+    setSyncStatus('Loading from cloud...')
+
+    const result = await loadFromSyncFolder()
+
+    if (result.success) {
+      setLastSync(getLastSyncTime())
+      setSyncStatus('✓ Loaded from cloud successfully!')
+    } else {
+      setSyncStatus(`✗ Error: ${result.error}`)
+    }
+
+    setSyncing(false)
+    setTimeout(() => setSyncStatus(null), 5000)
+  }
+
+  const formatLastSync = (timestamp: string | null) => {
+    if (!timestamp) return 'Never'
+    const date = new Date(timestamp)
+    return date.toLocaleString()
   }
 
   return (
@@ -73,36 +177,163 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             </div>
           </section>
 
-          {/* Export Data */}
-          <section>
-            <h3 className="text-lg font-semibold mb-4">Export Data</h3>
+          {/* Cloud Sync */}
+          <section className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+              <Cloud className="w-5 h-5" />
+              Cloud Sync
+            </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Export all your data including transcriptions, entries, and diary entries.
+              Sync your data with OneDrive or Google Drive. Select a folder on your computer that's synced with your cloud storage.
             </p>
-            <div className="flex gap-3">
+
+            {syncFolderName ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <Check className="w-4 h-4 text-green-600" />
+                  <span className="font-medium">Syncing to: {syncFolderName}</span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Last synced: {formatLastSync(lastSync)}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveToCloud}
+                    disabled={syncing}
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-2 rounded-lg text-sm',
+                      'bg-blue-600 text-white hover:bg-blue-700',
+                      'transition-colors disabled:opacity-50'
+                    )}
+                  >
+                    <Upload className="w-4 h-4" />
+                    {syncing ? 'Saving...' : 'Save Now'}
+                  </button>
+                  <button
+                    onClick={handleLoadFromCloud}
+                    disabled={syncing}
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-2 rounded-lg text-sm',
+                      'bg-cyan-600 text-white hover:bg-cyan-700',
+                      'transition-colors disabled:opacity-50'
+                    )}
+                  >
+                    <Download className="w-4 h-4" />
+                    {syncing ? 'Loading...' : 'Load Now'}
+                  </button>
+                  <button
+                    onClick={handleSelectSyncFolder}
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-2 rounded-lg text-sm',
+                      'bg-secondary text-secondary-foreground hover:bg-secondary/90',
+                      'transition-colors'
+                    )}
+                  >
+                    <FolderSync className="w-4 h-4" />
+                    Change Folder
+                  </button>
+                </div>
+              </div>
+            ) : (
               <button
-                onClick={handleExportJSON}
+                onClick={handleSelectSyncFolder}
                 className={cn(
                   'flex items-center gap-2 px-4 py-2 rounded-lg',
-                  'bg-primary text-primary-foreground hover:bg-primary/90',
+                  'bg-blue-600 text-white hover:bg-blue-700',
                   'transition-colors'
                 )}
               >
-                <FileJson size={18} />
-                Export as JSON
+                <FolderSync size={18} />
+                Select Sync Folder
               </button>
-              <button
-                onClick={handleExportText}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2 rounded-lg',
-                  'bg-secondary text-secondary-foreground hover:bg-secondary/90',
-                  'transition-colors'
-                )}
-              >
-                <FileText size={18} />
-                Export as Text
-              </button>
+            )}
+
+            {syncStatus && (
+              <div className={cn(
+                'mt-3 p-2 rounded text-sm',
+                syncStatus.includes('✓') ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
+              )}>
+                {syncStatus}
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground mt-3">
+              💡 Tip: Select a folder that's synced with OneDrive, Google Drive, or Dropbox. Changes will auto-sync every 5 minutes!
+            </p>
+          </section>
+
+          {/* Export & Import */}
+          <section>
+            <h3 className="text-lg font-semibold mb-4">Backup & Restore</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Download a backup or import data from a previous backup.
+            </p>
+
+            <div className="space-y-3">
+              <div className="flex gap-3 flex-wrap">
+                <button
+                  onClick={handleDownloadBackup}
+                  className={cn(
+                    'flex items-center gap-2 px-4 py-2 rounded-lg',
+                    'bg-primary text-primary-foreground hover:bg-primary/90',
+                    'transition-colors'
+                  )}
+                >
+                  <Download size={18} />
+                  Download Backup
+                </button>
+                <button
+                  onClick={handleImportClick}
+                  className={cn(
+                    'flex items-center gap-2 px-4 py-2 rounded-lg',
+                    'bg-secondary text-secondary-foreground hover:bg-secondary/90',
+                    'transition-colors'
+                  )}
+                >
+                  <Upload size={18} />
+                  Import Backup
+                </button>
+                <button
+                  onClick={handleExportJSON}
+                  className={cn(
+                    'flex items-center gap-2 px-4 py-2 rounded-lg',
+                    'bg-secondary text-secondary-foreground hover:bg-secondary/90',
+                    'transition-colors'
+                  )}
+                >
+                  <FileJson size={18} />
+                  Export JSON
+                </button>
+                <button
+                  onClick={handleExportText}
+                  className={cn(
+                    'flex items-center gap-2 px-4 py-2 rounded-lg',
+                    'bg-secondary text-secondary-foreground hover:bg-secondary/90',
+                    'transition-colors'
+                  )}
+                >
+                  <FileText size={18} />
+                  Export Text
+                </button>
+              </div>
+
+              {importStatus && (
+                <div className={cn(
+                  'p-2 rounded text-sm',
+                  importStatus.includes('✓') ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
+                )}>
+                  {importStatus}
+                </div>
+              )}
             </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              onChange={handleImportFile}
+              className="hidden"
+            />
           </section>
 
           {/* About */}

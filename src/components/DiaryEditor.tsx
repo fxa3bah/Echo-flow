@@ -4,6 +4,13 @@ import { ChevronLeft, ChevronRight, CheckSquare, Square } from 'lucide-react'
 import { db } from '../lib/db'
 import { formatDate, isSameDay, cn } from '../lib/utils'
 import type { DiaryEntry } from '../types'
+import { SlashCommandMenu, type SlashCommand } from './SlashCommandMenu'
+
+// Helper function to strip HTML tags and convert to plain text
+function stripHtml(html: string): string {
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  return doc.body.textContent || ''
+}
 
 export function DiaryEditor() {
   const [selectedDate, setSelectedDate] = useState(new Date())
@@ -12,6 +19,12 @@ export function DiaryEditor() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const saveTimeoutRef = useRef<number | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Slash command menu state
+  const [showSlashMenu, setShowSlashMenu] = useState(false)
+  const [slashFilter, setSlashFilter] = useState('')
+  const [slashPosition, setSlashPosition] = useState({ top: 0, left: 0 })
+  const [slashStartPos, setSlashStartPos] = useState(0)
 
   // Get diary entry for selected date
   const diaryEntry = useLiveQuery(async () => {
@@ -33,7 +46,21 @@ export function DiaryEditor() {
 
   useEffect(() => {
     if (diaryEntry) {
-      setContent(diaryEntry.content)
+      // Check if content contains HTML tags (from old rich text editor)
+      const hasHtmlTags = /<[^>]+>/.test(diaryEntry.content)
+      if (hasHtmlTags) {
+        // Strip HTML and convert to plain text
+        const plainText = stripHtml(diaryEntry.content)
+        setContent(plainText)
+
+        // Update the database to save cleaned version
+        db.diaryEntries.update(diaryEntry.id, {
+          content: plainText,
+          updatedAt: new Date(),
+        }).catch(console.error)
+      } else {
+        setContent(diaryEntry.content)
+      }
     } else {
       setContent('')
     }
@@ -75,13 +102,110 @@ export function DiaryEditor() {
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value
+    const cursorPos = e.target.selectionStart
     setContent(newContent)
+
+    // Check for slash command trigger
+    const textBeforeCursor = newContent.substring(0, cursorPos)
+    const lastSlashIndex = textBeforeCursor.lastIndexOf('/')
+
+    // Check if we just typed a slash at the start of a line or after a space
+    if (lastSlashIndex !== -1) {
+      const charBeforeSlash = lastSlashIndex > 0 ? textBeforeCursor[lastSlashIndex - 1] : '\n'
+      const textAfterSlash = textBeforeCursor.substring(lastSlashIndex + 1)
+
+      // Only show menu if slash is at start of line or after whitespace, and no space after slash yet
+      if ((charBeforeSlash === '\n' || charBeforeSlash === ' ') && !textAfterSlash.includes(' ') && !textAfterSlash.includes('\n')) {
+        setSlashFilter(textAfterSlash)
+        setSlashStartPos(lastSlashIndex)
+
+        // Calculate menu position
+        if (textareaRef.current) {
+          const textarea = textareaRef.current
+          const { top, left } = getCaretCoordinates(textarea, cursorPos)
+          setSlashPosition({
+            top: top + 20,
+            left: left
+          })
+        }
+
+        setShowSlashMenu(true)
+      } else {
+        setShowSlashMenu(false)
+      }
+    } else {
+      setShowSlashMenu(false)
+    }
 
     // Auto-save after 1 second of no typing
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     saveTimeoutRef.current = window.setTimeout(() => {
       handleSave(newContent)
     }, 1000)
+  }
+
+  const handleSlashCommandSelect = (command: SlashCommand) => {
+    if (!textareaRef.current) return
+
+    // Get the command value (could be a function)
+    const commandValue = typeof command.value === 'function' ? command.value() : command.value
+
+    // Replace /filter with the command
+    const before = content.substring(0, slashStartPos)
+    const after = content.substring(textareaRef.current.selectionStart)
+    const newContent = before + commandValue + after
+
+    setContent(newContent)
+    setShowSlashMenu(false)
+
+    // Set cursor position after inserted command
+    setTimeout(() => {
+      if (textareaRef.current) {
+        let cursorPos = before.length + commandValue.length
+
+        // For paired characters, move cursor to middle
+        if (commandValue === '****' || commandValue === '**' || commandValue === '~~~~' ||
+            commandValue === '====' || commandValue === '``' || commandValue === '[[]]' ||
+            commandValue === '[]()') {
+          cursorPos = before.length + Math.floor(commandValue.length / 2)
+        }
+
+        textareaRef.current.focus()
+        textareaRef.current.setSelectionRange(cursorPos, cursorPos)
+      }
+    }, 0)
+
+    // Save the new content
+    handleSave(newContent)
+  }
+
+  // Function to get caret coordinates in textarea
+  const getCaretCoordinates = (element: HTMLTextAreaElement, position: number) => {
+    const div = document.createElement('div')
+    const span = document.createElement('span')
+    const computed = window.getComputedStyle(element)
+
+    div.style.cssText = `
+      position: absolute;
+      visibility: hidden;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: ${computed.fontFamily};
+      font-size: ${computed.fontSize};
+      line-height: ${computed.lineHeight};
+      padding: ${computed.padding};
+      width: ${element.clientWidth}px;
+    `
+
+    div.textContent = element.value.substring(0, position)
+    span.textContent = element.value.substring(position) || '.'
+    div.appendChild(span)
+    document.body.appendChild(div)
+
+    const { offsetTop: top, offsetLeft: left } = span
+    document.body.removeChild(div)
+
+    return { top: top + element.offsetTop, left: left + element.offsetLeft }
   }
 
   const handleToggleTodo = async (entryId: string, currentCompleted: boolean) => {
@@ -234,29 +358,40 @@ export function DiaryEditor() {
       )}
 
       {/* Notes Section */}
-      <div className="space-y-2">
+      <div className="space-y-2 relative">
         <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
           Daily Notes
         </h4>
-        <div className="border border-border rounded-lg bg-card">
+        <div className="border border-border rounded-lg bg-card relative">
           <textarea
             ref={textareaRef}
             value={content}
             onChange={handleContentChange}
             placeholder="Write your thoughts for today...
 
-Use markdown:
+Markdown shortcuts:
+- Type / for commands menu
 - **bold**, *italic*, ~~strikethrough~~
-- # Heading 1, ## Heading 2
-- - Bullet points
-- [ ] Todo items (type [ ] or [x])
-- tomorrow, next week (auto-detected)"
+- # Heading, ## Heading 2
+- - Bullet list, 1. Numbered list
+- [ ] Todo, [x] Done
+- Type naturally: tomorrow, next week, call John, etc."
             className="w-full p-4 bg-transparent border-none focus:outline-none resize-none min-h-[300px] font-mono text-sm"
             style={{ overflow: 'hidden' }}
           />
+
+          {/* Slash Command Menu */}
+          {showSlashMenu && (
+            <SlashCommandMenu
+              filter={slashFilter}
+              onSelect={handleSlashCommandSelect}
+              onClose={() => setShowSlashMenu(false)}
+              position={slashPosition}
+            />
+          )}
         </div>
         <p className="text-xs text-muted-foreground">
-          Markdown supported. Type naturally and dates, todos, and reminders will be auto-detected.
+          Type <kbd className="px-1 py-0.5 bg-muted rounded text-xs">/</kbd> for markdown commands. Dates, todos, and reminders are auto-detected.
         </p>
       </div>
     </div>

@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react'
-import { Mic, MicOff, Save, X, Loader2, AlertCircle } from 'lucide-react'
+import { Mic, MicOff, Save, X, Loader2, AlertCircle, Wifi, WifiOff } from 'lucide-react'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
 import { useAudioRecorder } from '../hooks/useAudioRecorder'
-import { transcribeAudio, isWhisperConfigured, validateWhisperSetup } from '../services/whisperService'
+import { transcribeWithGroq, isGroqConfigured, validateGroqSetup } from '../services/groqService'
 import { db } from '../lib/db'
 import { aiService } from '../services/aiService'
 import type { Transcription } from '../types'
 import { cn } from '../lib/utils'
 
 export function VoiceRecorder() {
-  const whisperConfigured = isWhisperConfigured()
+  const groqConfigured = isGroqConfigured()
 
-  // Web Speech API (fallback)
+  // Offline mode: Web Speech API (browser-based)
   const speechRecognition = useSpeechRecognition()
 
-  // Whisper API (preferred if configured)
+  // Online mode: Audio recorder for Groq Whisper API
   const audioRecorder = useAudioRecorder()
 
   const [transcript, setTranscript] = useState('')
@@ -22,54 +22,53 @@ export function VoiceRecorder() {
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [useWhisper, setUseWhisper] = useState(whisperConfigured)
+  const [useOnlineMode, setUseOnlineMode] = useState(groqConfigured)
   const [setupWarning, setSetupWarning] = useState<string | null>(null)
+  const [showManualInput, setShowManualInput] = useState(false)
 
-  const isRecording = useWhisper ? audioRecorder.isRecording : speechRecognition.isListening
-  const currentError = useWhisper ? audioRecorder.error : speechRecognition.error
-  const isSupported = useWhisper ? audioRecorder.isSupported : speechRecognition.isSupported
+  const isRecording = useOnlineMode ? audioRecorder.isRecording : speechRecognition.isListening
+  const currentError = useOnlineMode ? audioRecorder.error : speechRecognition.error
+  const isSupported = useOnlineMode ? audioRecorder.isSupported : speechRecognition.isSupported
 
-  // Update transcript from Web Speech API
+  // Update transcript from Web Speech API (offline mode)
   useEffect(() => {
-    if (!useWhisper && speechRecognition.transcript) {
+    if (!useOnlineMode && speechRecognition.transcript) {
       setTranscript(speechRecognition.transcript)
     }
-  }, [useWhisper, speechRecognition.transcript])
+  }, [useOnlineMode, speechRecognition.transcript])
 
   const handleToggleRecording = async () => {
     setError(null)
 
     if (isRecording) {
       // Stop recording
-      if (useWhisper) {
+      if (useOnlineMode) {
         setIsTranscribing(true)
         try {
           const audioBlob = await audioRecorder.stopRecording()
 
           if (audioBlob) {
-            // Transcribe with Whisper
-            const transcribedText = await transcribeAudio(audioBlob)
+            // Transcribe with Groq Whisper API (online mode)
+            const transcribedText = await transcribeWithGroq(audioBlob)
             setTranscript(transcribedText)
           }
         } catch (err: any) {
           console.error('Transcription error:', err)
           const errorMessage = err.message || 'Failed to transcribe audio'
 
-          // Check if this is a connection/CORS error and offer fallback
+          // Check if this is a connection error and offer fallback
           if (errorMessage.includes('Connection error') ||
-              errorMessage.includes('CORS') ||
               errorMessage.includes('API key not configured')) {
 
-            // Automatically fallback to Web Speech API
+            // Automatically fallback to offline mode
             if (speechRecognition.isSupported) {
-              setUseWhisper(false)
+              setUseOnlineMode(false)
               setError(
-                'OpenAI Whisper is unavailable (likely due to CORS restrictions or missing API key). ' +
-                'Switched to browser-based speech recognition. For high-accuracy transcription, ' +
-                'consider setting up a backend proxy.'
+                'Online transcription unavailable (connection error or missing API key). ' +
+                'Switched to Offline mode. To use Online mode, add VITE_GROQ_API_KEY to your environment.'
               )
               setSetupWarning(
-                'Note: OpenAI API calls from the browser are restricted. Use Web Speech API or set up a backend proxy.'
+                'Note: Online mode requires a Groq API key. Get one free at https://console.groq.com'
               )
             } else {
               setError(
@@ -90,7 +89,7 @@ export function VoiceRecorder() {
       // Start recording
       setTranscript('')
 
-      if (useWhisper) {
+      if (useOnlineMode) {
         await audioRecorder.startRecording()
       } else {
         speechRecognition.resetTranscript()
@@ -140,7 +139,7 @@ export function VoiceRecorder() {
 
       setSaveSuccess(true)
       setTranscript('')
-      if (!useWhisper) speechRecognition.resetTranscript()
+      if (!useOnlineMode) speechRecognition.resetTranscript()
       setTimeout(() => setSaveSuccess(false), 2000)
     } catch (error) {
       console.error('Failed to save transcription:', error)
@@ -153,7 +152,7 @@ export function VoiceRecorder() {
   const handleDiscard = () => {
     setTranscript('')
     setError(null)
-    if (!useWhisper) {
+    if (!useOnlineMode) {
       speechRecognition.resetTranscript()
       speechRecognition.stopListening()
     }
@@ -162,22 +161,22 @@ export function VoiceRecorder() {
   useEffect(() => {
     aiService.checkOllamaAvailability()
 
-    // Validate Whisper setup on mount
-    if (whisperConfigured) {
-      validateWhisperSetup().then((result) => {
+    // Validate Groq setup on mount
+    if (groqConfigured) {
+      validateGroqSetup().then((result) => {
         if (!result.valid && result.error) {
           setSetupWarning(result.error)
-          setUseWhisper(false)
+          setUseOnlineMode(false)
         }
       })
     }
-  }, [whisperConfigured])
+  }, [groqConfigured])
 
   if (!isSupported) {
     return (
       <div className="text-center p-8 bg-destructive/10 rounded-lg">
         <p className="text-destructive">
-          {useWhisper
+          {useOnlineMode
             ? 'Audio recording is not supported in your browser.'
             : 'Speech recognition is not supported in your browser. Please use Chrome, Edge, or Safari.'}
         </p>
@@ -187,52 +186,61 @@ export function VoiceRecorder() {
 
   return (
     <div className="space-y-6">
-      {/* Transcription Mode Toggle */}
+      {/* Online/Offline Mode Toggle */}
       {speechRecognition.isSupported && (
         <div className="flex items-center justify-center gap-4 p-4 bg-muted/50 rounded-lg">
           <span className="text-sm font-medium text-muted-foreground">
-            Transcription Mode:
+            Mode:
           </span>
           <div className="flex gap-2">
             <button
               onClick={() => {
-                setUseWhisper(false)
+                setUseOnlineMode(false)
                 setSetupWarning(null)
                 setError(null)
               }}
               disabled={isRecording}
               className={cn(
-                'px-4 py-2 rounded-lg font-medium transition-all text-sm',
-                !useWhisper
+                'px-4 py-2 rounded-lg font-medium transition-all text-sm flex items-center gap-2',
+                !useOnlineMode
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
                 isRecording && 'opacity-50 cursor-not-allowed'
               )}
             >
-              Browser
+              <WifiOff className="w-4 h-4" />
+              Offline
             </button>
-            {whisperConfigured && (
-              <button
-                onClick={() => {
-                  setUseWhisper(true)
-                  setSetupWarning(null)
-                  setError(null)
-                }}
-                disabled={isRecording}
-                className={cn(
-                  'px-4 py-2 rounded-lg font-medium transition-all text-sm',
-                  useWhisper
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-                  isRecording && 'opacity-50 cursor-not-allowed'
-                )}
-              >
-                OpenAI Whisper
-              </button>
-            )}
+            <button
+              onClick={() => {
+                setUseOnlineMode(true)
+                setSetupWarning(null)
+                setError(null)
+              }}
+              disabled={isRecording}
+              className={cn(
+                'px-4 py-2 rounded-lg font-medium transition-all text-sm flex items-center gap-2',
+                useOnlineMode
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+                isRecording && 'opacity-50 cursor-not-allowed'
+              )}
+            >
+              <Wifi className="w-4 h-4" />
+              Online {groqConfigured && '(Groq)'}
+            </button>
           </div>
         </div>
       )}
+
+      {/* Mode Info */}
+      <div className="text-center text-xs text-muted-foreground">
+        {useOnlineMode ? (
+          <span>✨ Online: Lightning-fast, high-accuracy AI transcription (Groq Whisper)</span>
+        ) : (
+          <span>🔒 Offline: Private browser-based speech recognition</span>
+        )}
+      </div>
 
       {/* Setup Warning */}
       {setupWarning && (
@@ -242,46 +250,95 @@ export function VoiceRecorder() {
         </div>
       )}
 
-      {/* Recording Button */}
-      <div className="flex justify-center">
-        <button
-          onClick={handleToggleRecording}
-          disabled={isTranscribing}
-          className={cn(
-            'relative w-32 h-32 rounded-full flex items-center justify-center',
-            'transition-all duration-300 transform hover:scale-105',
-            'focus:outline-none focus:ring-4 focus:ring-primary/50',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
-            isRecording
-              ? 'bg-destructive text-destructive-foreground animate-pulse-slow shadow-lg shadow-destructive/50'
-              : 'bg-primary text-primary-foreground shadow-lg shadow-primary/30'
-          )}
-          aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-        >
-          {isTranscribing ? (
-            <Loader2 size={48} className="animate-spin" />
-          ) : isRecording ? (
-            <MicOff size={48} />
-          ) : (
-            <Mic size={48} />
-          )}
-          {isRecording && !isTranscribing && (
-            <span className="absolute -bottom-8 text-sm font-medium">
-              Recording...
-            </span>
-          )}
-          {isTranscribing && (
-            <span className="absolute -bottom-8 text-sm font-medium">
-              Transcribing...
-            </span>
-          )}
-        </button>
+      {/* Recording Button and Type Instead Option */}
+      <div className="space-y-4">
+        <div className="flex justify-center">
+          <button
+            onClick={handleToggleRecording}
+            disabled={isTranscribing || showManualInput}
+            className={cn(
+              'relative w-32 h-32 rounded-full flex items-center justify-center',
+              'transition-all duration-300 transform hover:scale-105',
+              'focus:outline-none focus:ring-4 focus:ring-primary/50',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              isRecording
+                ? 'bg-destructive text-destructive-foreground animate-pulse-slow shadow-lg shadow-destructive/50'
+                : 'bg-primary text-primary-foreground shadow-lg shadow-primary/30'
+            )}
+            aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+          >
+            {isTranscribing ? (
+              <Loader2 size={48} className="animate-spin" />
+            ) : isRecording ? (
+              <MicOff size={48} />
+            ) : (
+              <Mic size={48} />
+            )}
+            {isRecording && !isTranscribing && (
+              <span className="absolute -bottom-8 text-sm font-medium">
+                Recording...
+              </span>
+            )}
+            {isTranscribing && (
+              <span className="absolute -bottom-8 text-sm font-medium">
+                Transcribing...
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Type Instead Button */}
+        {!isRecording && !isTranscribing && !showManualInput && !transcript && (
+          <div className="text-center">
+            <button
+              onClick={() => setShowManualInput(true)}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors underline"
+            >
+              Or type your text instead
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Error Message */}
+      {/* Error Message with Manual Input Option */}
       {(currentError || error) && (
-        <div className="p-4 bg-destructive/10 text-destructive rounded-lg text-center">
-          {error || currentError}
+        <div className="p-4 bg-destructive/10 text-destructive rounded-lg space-y-3">
+          <p className="text-center">{error || currentError}</p>
+          {!showManualInput && (
+            <button
+              onClick={() => setShowManualInput(true)}
+              className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Type Text Instead
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Manual Text Input */}
+      {showManualInput && !transcript && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">
+            Type your note, task, or reminder:
+          </label>
+          <textarea
+            value={transcript}
+            onChange={(e) => setTranscript(e.target.value)}
+            placeholder="Call Daniel tomorrow at 1pm..."
+            className="w-full p-4 border border-border rounded-lg bg-background min-h-32 focus:outline-none focus:ring-2 focus:ring-primary"
+            autoFocus
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setShowManualInput(false)
+                setTranscript('')
+              }}
+              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
