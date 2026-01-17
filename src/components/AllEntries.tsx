@@ -15,6 +15,12 @@ export function AllEntries() {
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null)
   const [editedTags, setEditedTags] = useState('')
 
+  const stripAiActionLines = (text: string) =>
+    text
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('### AI Actions'))
+      .join('\n')
+
   // Load all data from unified table
   useEffect(() => {
     loadAllData()
@@ -24,7 +30,26 @@ export function AllEntries() {
     try {
       // Simple! Just one table query
       const allEntries = await db.entries.toArray()
-      setEntries(allEntries)
+      const cleanedEntries = allEntries
+        .filter((entry) => {
+          if (!entry.content.trim().startsWith('### AI Actions')) return true
+          db.entries.delete(entry.id).catch(console.error)
+          return false
+        })
+        .map((entry) => {
+        if (entry.type === 'diary') {
+          const cleanedContent = stripAiActionLines(entry.content)
+          if (cleanedContent !== entry.content) {
+            db.entries.update(entry.id, {
+              content: cleanedContent,
+              updatedAt: new Date(),
+            }).catch(console.error)
+            return { ...entry, content: cleanedContent }
+          }
+        }
+        return entry
+      })
+      setEntries(cleanedEntries)
     } catch (error) {
       console.error('Failed to load data:', error)
     }

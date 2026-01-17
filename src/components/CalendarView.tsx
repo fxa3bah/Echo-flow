@@ -28,6 +28,7 @@ export function CalendarView() {
     return db.entries
       .where('date')
       .between(start, end, true, true)
+      .filter((entry) => entry.type !== 'diary')
       .toArray()
   }, [selectedDate])
 

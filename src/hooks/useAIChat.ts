@@ -27,10 +27,10 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
   const speechRecognition = useSpeechRecognition()
 
   useEffect(() => {
-    if (speechRecognition.transcript && isListening) {
+    if (speechRecognition.transcript) {
       setInput(speechRecognition.transcript)
     }
-  }, [speechRecognition.transcript, isListening])
+  }, [speechRecognition.transcript])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -133,6 +133,8 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     if ((lower.includes('reply') || lower.includes('email')) && !hasReply) {
       const nameMatch = message.match(/reply to\s+([a-zA-Z]+)(?:'s)?\s+email/i)
       const person = nameMatch ? nameMatch[1] : 'their'
+      const subjectMatch = message.match(/on the subject\s+of\s+(.+?)(?:\s+before|\s+by|\s+at|$)/i)
+      const subject = subjectMatch ? subjectMatch[1].trim() : null
       const replyDate = new Date(baseDate)
       if (time) {
         replyDate.setHours(time.hour, time.minute, 0, 0)
@@ -140,9 +142,9 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
       next.push({
         type: 'todo',
         title: `Reply to ${person}'s email`,
-        content: `Reply to ${person}'s email`,
+        content: subject ? `Reply to ${person}'s email about ${subject}` : `Reply to ${person}'s email`,
         date: time ? replyDate : undefined,
-        tags: ['email', person.toLowerCase()],
+        tags: ['email', person.toLowerCase(), ...(subject ? deriveTags(subject) : [])].slice(0, 3),
       })
     }
 
@@ -159,6 +161,19 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
       })
     }
 
+    const hasWork = actions.some((action) => /work on|contract/i.test(`${action.title} ${action.content}`))
+    const workMatch = message.match(/work on\s+(.+?)(?:\s+and|,|$)/i)
+    if (workMatch && !hasWork) {
+      const task = workMatch[1].trim().replace(/\.$/, '')
+      next.push({
+        type: 'todo',
+        title: `Work on ${task}`,
+        content: `Work on ${task}`,
+        date: /today/i.test(message) ? baseDate : undefined,
+        tags: deriveTags(task),
+      })
+    }
+
     return next.map((action) => {
       const titleContent = `${action.title} ${action.content}`
       if (!action.date && time && /reply|respond|email/i.test(titleContent)) {
@@ -167,7 +182,7 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
         return ensureTags({ ...action, date: dated })
       }
 
-      if (!action.date && /today/i.test(message)) {
+      if (!action.date && /today/i.test(message) && !/reply|respond|email/i.test(titleContent)) {
         const dated = new Date(baseDate)
         dated.setHours(9, 0, 0, 0)
         return ensureTags({ ...action, date: dated })

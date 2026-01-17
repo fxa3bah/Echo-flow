@@ -5,7 +5,7 @@ import { cn } from '../lib/utils'
 import type { Priority } from '../types'
 import { analyzeAllDataForMatrix } from '../services/matrixAI'
 
-type DateFilter = 'today' | 'last-3-days' | 'this-week' | 'last-week' | 'last-month' | 'future' | 'next-7-days' | 'all'
+type DateFilter = 'today' | 'next-24h' | 'this-week' | 'next-7-days' | 'later' | 'all'
 
 interface AnalyzedItem {
   id: string
@@ -50,14 +50,12 @@ const quadrantInfo = {
 }
 
 const dateFilterOptions: { value: DateFilter; label: string }[] = [
-  { value: 'all', label: 'All Items' },
-  { value: 'today', label: 'Today' },
-  { value: 'last-3-days', label: 'Last 3 Days' },
+  { value: 'today', label: 'Focus Today' },
+  { value: 'next-24h', label: 'Next 24h' },
   { value: 'this-week', label: 'This Week' },
-  { value: 'last-week', label: 'Last Week' },
-  { value: 'last-month', label: 'Last Month' },
   { value: 'next-7-days', label: 'Next 7 Days' },
-  { value: 'future', label: 'Future' },
+  { value: 'later', label: 'Later' },
+  { value: 'all', label: 'Everything' },
 ]
 
 export function EisenhowerMatrix() {
@@ -99,10 +97,10 @@ export function EisenhowerMatrix() {
         case 'today':
           return itemDay.getTime() === today.getTime()
 
-        case 'last-3-days': {
-          const threeDaysAgo = new Date(today)
-          threeDaysAgo.setDate(today.getDate() - 3)
-          return itemDay >= threeDaysAgo && itemDay <= today
+        case 'next-24h': {
+          const nextDay = new Date(today)
+          nextDay.setDate(today.getDate() + 1)
+          return itemDate >= today && itemDate <= nextDay
         }
 
         case 'this-week': {
@@ -111,21 +109,7 @@ export function EisenhowerMatrix() {
           return itemDay >= weekStart && itemDay <= today
         }
 
-        case 'last-week': {
-          const lastWeekEnd = new Date(today)
-          lastWeekEnd.setDate(today.getDate() - today.getDay() - 1) // Last Saturday
-          const lastWeekStart = new Date(lastWeekEnd)
-          lastWeekStart.setDate(lastWeekEnd.getDate() - 6) // Last Sunday
-          return itemDay >= lastWeekStart && itemDay <= lastWeekEnd
-        }
-
-        case 'last-month': {
-          const monthAgo = new Date(today)
-          monthAgo.setMonth(today.getMonth() - 1)
-          return itemDay >= monthAgo && itemDay <= today
-        }
-
-        case 'future':
+        case 'later':
           return itemDay > today
 
         case 'next-7-days': {

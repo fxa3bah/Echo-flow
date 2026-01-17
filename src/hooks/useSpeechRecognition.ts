@@ -52,14 +52,17 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
       }
 
       // Update display with final + interim results
-      setTranscript(finalTranscript + interimTranscript)
+      const combinedTranscript = `${finalTranscript}${interimTranscript}`.trim()
+      setTranscript(combinedTranscript)
 
-      if (silenceTimerRef.current) {
-        window.clearTimeout(silenceTimerRef.current)
+      if (combinedTranscript) {
+        if (silenceTimerRef.current) {
+          window.clearTimeout(silenceTimerRef.current)
+        }
+        silenceTimerRef.current = window.setTimeout(() => {
+          recognition.stop()
+        }, 1500)
       }
-      silenceTimerRef.current = window.setTimeout(() => {
-        recognition.stop()
-      }, 1500)
     }
 
     recognition.onerror = (event: any) => {
