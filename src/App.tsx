@@ -10,6 +10,7 @@ import { AIInsights } from './components/AIInsights'
 import { AIChatBox } from './components/AIChatBox'
 import { SettingsModal } from './components/SettingsModal'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
+import { useReminderNotifications } from './hooks/useReminderNotifications'
 import { cn } from './lib/utils'
 
 type View = 'home' | 'aiinsights' | 'entries' | 'calendar' | 'matrix' | 'diary'
@@ -57,6 +58,7 @@ function App() {
       handler: () => setShowSettings(true),
     },
   ])
+  useReminderNotifications()
 
   return (
     <div className={cn('min-h-screen transition-colors duration-200', theme)}>
