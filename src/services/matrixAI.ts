@@ -21,7 +21,9 @@ export async function analyzeAllDataForMatrix(): Promise<AnalyzedItem[]> {
   }
 
   // Simple! Just fetch from unified table
-  const entries = await db.entries.toArray()
+  const entries = await db.entries
+    .filter((entry) => entry.type === 'todo' || entry.type === 'reminder')
+    .toArray()
 
   // Map to analyzed items
   const allItems: AnalyzedItem[] = entries.map((e) => ({

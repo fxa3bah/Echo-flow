@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { getAIInsights, type ChatMessage } from '../services/groqChatService'
 import { useSpeechRecognition } from './useSpeechRecognition'
-import { applyAIActions, appendToDiaryEntry, buildAIContextSummary } from '../services/aiActions'
+import { applyAIActions, buildAIContextSummary, type AIAction } from '../services/aiActions'
 
 export interface AIChatMessage {
   role: 'user' | 'assistant'
   content: string
-  actions?: any[]
-  pendingActions?: any[]
+  actions?: AIAction[]
+  pendingActions?: AIAction[]
   rejectedActionIndices?: number[]
 }
 
@@ -22,6 +22,7 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
   const [actionsCreated, setActionsCreated] = useState(0)
   const [isListening, setIsListening] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const storageKeyRef = useRef('echo-flow-ai-chat')
 
   const speechRecognition = useSpeechRecognition()
 
@@ -35,6 +36,28 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const stored = window.localStorage.getItem(storageKeyRef.current)
+      if (stored) {
+        setMessages(JSON.parse(stored) as AIChatMessage[])
+      } else if (initialMessages.length > 0) {
+        setMessages(initialMessages)
+      }
+    } catch {
+      if (initialMessages.length > 0) {
+        setMessages(initialMessages)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(storageKeyRef.current, JSON.stringify(messages))
+  }, [messages])
+
   const handleVoiceToggle = () => {
     if (isListening) {
       speechRecognition.stopListening()
@@ -46,16 +69,27 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     }
   }
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return
+  const buildPendingState = (actions: AIAction[]) => {
+    const pendingActions = actions.length > 0 ? actions : undefined
+    const missingDueActions = (pendingActions || []).filter(
+      (action) => (action.type === 'todo' || action.type === 'reminder') && !action.date
+    )
+    const followUpPrompt = missingDueActions.length > 0
+      ? `\n\nQuick question: when should I schedule ${missingDueActions.length === 1 ? `"${missingDueActions[0].title}"` : 'these items'}?`
+      : ''
+    return { pendingActions, followUpPrompt }
+  }
 
-    const userMessage = input.trim()
+  const sendMessage = async (userMessage: string) => {
+    if (!userMessage.trim() || isLoading) return
+
+    const trimmedMessage = userMessage.trim()
     setInput('')
     speechRecognition.resetTranscript()
     setIsListening(false)
     speechRecognition.stopListening()
 
-    setMessages((prev) => [...prev, { role: 'user', content: userMessage }])
+    setMessages((prev) => [...prev, { role: 'user', content: trimmedMessage }])
     setIsLoading(true)
 
     try {
@@ -65,27 +99,22 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
       }))
 
       const contextSummary = await buildAIContextSummary()
-      const insight = await getAIInsights(userMessage, conversationHistory, contextSummary)
+      const insight = await getAIInsights(trimmedMessage, conversationHistory, contextSummary)
+
+      const { pendingActions, followUpPrompt } = buildPendingState(insight.actions)
 
       // Store actions as pending instead of auto-applying
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: insight.response,
-          pendingActions: insight.actions.length > 0 ? insight.actions : undefined,
+          content: `${insight.response}${followUpPrompt}`,
+          pendingActions,
           rejectedActionIndices: [],
         },
       ])
 
-      // Auto-append chat to diary only if no note/journal actions
-      const noteActionExists = insight.actions.some(
-        (action) => action.type === 'note' || action.type === 'journal'
-      )
-
-      if (!noteActionExists) {
-        await appendToDiaryEntry(new Date(), `### AI Chat\n${userMessage}`)
-      }
+      // No automatic diary append; entries are created when actions are accepted.
     } catch (error: any) {
       setMessages((prev) => [
         ...prev,
@@ -99,7 +128,24 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     }
   }
 
-  const handleAcceptAction = async (messageIndex: number, actionIndex: number, action: any) => {
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return
+    await sendMessage(input)
+  }
+
+  const handleSendMessage = async (message: string) => {
+    if (isLoading) return
+    await sendMessage(message)
+  }
+
+  const handleClearChat = () => {
+    setMessages(initialMessages)
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(storageKeyRef.current)
+    }
+  }
+
+  const handleAcceptAction = async (messageIndex: number, actionIndex: number, action: AIAction) => {
     try {
       // Apply the action to the database
       const actionResult = await applyAIActions([action], new Date())
@@ -175,6 +221,29 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     }
   }
 
+  const handleUpdatePendingAction = (
+    messageIndex: number,
+    actionIndex: number,
+    updates: Partial<AIAction>
+  ) => {
+    setMessages((prev) =>
+      prev.map((msg, idx) => {
+        if (idx !== messageIndex || !msg.pendingActions) {
+          return msg
+        }
+
+        const nextPending = msg.pendingActions.map((action, i) =>
+          i === actionIndex ? { ...action, ...updates } : action
+        )
+
+        return {
+          ...msg,
+          pendingActions: nextPending,
+        }
+      })
+    )
+  }
+
   return {
     messages,
     input,
@@ -187,6 +256,9 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     handleAcceptAction,
     handleRejectAction,
     handleAcceptAll,
+    handleUpdatePendingAction,
+    handleSendMessage,
+    handleClearChat,
     messagesEndRef,
     speechRecognition,
   }
