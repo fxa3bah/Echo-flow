@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useThemeStore } from './stores/themeStore'
 import { VoiceRecorder } from './components/VoiceRecorder'
 import { Navigation } from './components/Navigation'
-import { TranscriptionsList } from './components/TranscriptionsList'
+import { AllEntries } from './components/AllEntries'
 import { CalendarView } from './components/CalendarView'
 import { EisenhowerMatrix } from './components/EisenhowerMatrix'
 import { DiaryEditor } from './components/DiaryEditor'
@@ -12,7 +12,7 @@ import { SettingsModal } from './components/SettingsModal'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { cn } from './lib/utils'
 
-type View = 'home' | 'aiinsights' | 'transcriptions' | 'calendar' | 'matrix' | 'diary'
+type View = 'home' | 'aiinsights' | 'entries' | 'calendar' | 'matrix' | 'diary'
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('home')
@@ -32,9 +32,9 @@ function App() {
       handler: () => setCurrentView('aiinsights'),
     },
     {
-      key: 't',
+      key: 'e',
       ctrlKey: true,
-      handler: () => setCurrentView('transcriptions'),
+      handler: () => setCurrentView('entries'),
     },
     {
       key: 'c',
@@ -87,7 +87,7 @@ function App() {
           )}
 
           {currentView === 'aiinsights' && <AIInsights />}
-          {currentView === 'transcriptions' && <TranscriptionsList />}
+          {currentView === 'entries' && <AllEntries />}
           {currentView === 'calendar' && <CalendarView />}
           {currentView === 'matrix' && <EisenhowerMatrix />}
           {currentView === 'diary' && <DiaryEditor />}
