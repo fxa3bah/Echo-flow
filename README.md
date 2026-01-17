@@ -46,11 +46,14 @@ A fast, intuitive voice-first productivity web application that combines quick v
 - **Context-Aware**: Uses your existing daily data for relevant suggestions
 - **Groq Llama 3.3 70B**: Fast, powerful language model
 
-### 📝 Transcription Management
-- View all transcriptions in a clean, organized list
-- Edit, delete, or recategorize any transcription
-- Filter by category and tags
-- Timestamps for easy reference
+### 📊 All Entries - Master Data View
+- **Unified View**: See ALL your data in one place (transcriptions, todos, reminders, notes, diary entries)
+- **Sortable Columns**: Click any column header to sort by date, type, or content
+- **Chronological Order**: Everything in order from newest to oldest
+- **Search**: Filter across all content and tags instantly
+- **Quick Actions**: Mark tasks complete, delete any entry type
+- **Clean & Simple**: No clutter, just your data in a clear table
+- **Data Integrity**: ONE source of truth for all captured information
 
 ### 📝 LogSeq-Style Daily Notes
 - **Markdown Editor**: Write notes in markdown with live preview
@@ -198,7 +201,7 @@ Example prompts:
 - `Ctrl + R` - Record view (home)
 - `Ctrl + D` - Daily Notes
 - `Ctrl + A` - AI Chat (full page)
-- `Ctrl + T` - Transcriptions
+- `Ctrl + E` - All Entries (master data)
 - `Ctrl + C` - Calendar
 - `Ctrl + M` - Eisenhower Matrix
 - `Ctrl + ,` - Settings
@@ -273,7 +276,7 @@ src/
 │   ├── AIChatBox.tsx        # Embedded AI chat
 │   ├── AIInsights.tsx       # Full-page AI chat view
 │   ├── AIActionCard.tsx     # Action preview cards (NEW in v2.0)
-│   ├── TranscriptionsList.tsx  # Transcription management
+│   ├── AllEntries.tsx       # Master data view - all entries unified (NEW in v2.0)
 │   ├── CalendarView.tsx     # Calendar with markdown rendering
 │   ├── EisenhowerMatrix.tsx # AI-powered priority matrix
 │   ├── DiaryEditor.tsx      # LogSeq-style markdown editor
