@@ -49,25 +49,44 @@ export function DiaryEditor() {
   // Get entries (todos/reminders) for selected date
   const dayEntries = useLiveQuery(async () => {
     const all = await db.entries.toArray()
-    return all.filter((e) => isSameDay(e.date, selectedDate))
+    return all.filter(
+      (e) =>
+        isSameDay(e.date, selectedDate) &&
+        (e.type === 'todo' || e.type === 'reminder') &&
+        !e.content.trim().startsWith('### AI Actions')
+    )
+  }, [selectedDate])
+
+  useEffect(() => {
+    const cleanupLegacyEntries = async () => {
+      const start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate())
+      const end = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59, 999)
+      await db.entries
+        .where('date')
+        .between(start, end, true, true)
+        .filter((entry) => entry.content.trim().startsWith('### AI Actions'))
+        .delete()
+    }
+    cleanupLegacyEntries().catch(console.error)
   }, [selectedDate])
 
   useEffect(() => {
     if (diaryEntry) {
       // Check if content contains HTML tags (from old rich text editor)
       const hasHtmlTags = /<[^>]+>/.test(diaryEntry.content)
-      if (hasHtmlTags) {
-        // Strip HTML and convert to plain text
-        const plainText = stripHtml(diaryEntry.content)
-        setContent(plainText)
+      const rawContent = hasHtmlTags ? stripHtml(diaryEntry.content) : diaryEntry.content
+      const cleanedContent = rawContent
+        .split('\n')
+        .filter((line) => !line.trim().startsWith('### AI Actions'))
+        .join('\n')
 
-        // Update the database to save cleaned version
+      setContent(cleanedContent)
+
+      if (cleanedContent !== diaryEntry.content) {
         db.diaryEntries.update(diaryEntry.id, {
-          content: plainText,
+          content: cleanedContent,
           updatedAt: new Date(),
         }).catch(console.error)
-      } else {
-        setContent(diaryEntry.content)
       }
     } else {
       setContent('')

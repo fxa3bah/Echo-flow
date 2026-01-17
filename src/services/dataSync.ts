@@ -107,16 +107,56 @@ export async function downloadDataAsFile() {
 // Auto-sync with local folder (OneDrive/Google Drive sync)
 let syncFolderHandle: FileSystemDirectoryHandle | null = null
 let autoSyncInterval: number | null = null
+const SYNC_MODE_KEY = 'syncMode'
+const syncFolderLabel = 'Device File Picker'
+
+const isDirectoryPickerSupported = () => typeof window !== 'undefined' && 'showDirectoryPicker' in window
+const isOpenFilePickerSupported = () => typeof window !== 'undefined' && 'showOpenFilePicker' in window
+const isSaveFilePickerSupported = () => typeof window !== 'undefined' && 'showSaveFilePicker' in window
+
+const selectFileForSave = async () => {
+  if (!isSaveFilePickerSupported()) {
+    throw new Error('File picker not supported for saving.')
+  }
+
+  // @ts-ignore
+  return window.showSaveFilePicker({
+    suggestedName: 'echo-flow-data.json',
+    types: [
+      {
+        description: 'JSON',
+        accept: { 'application/json': ['.json'] },
+      },
+    ],
+  })
+}
+
+const selectFileForOpen = async () => {
+  if (!isOpenFilePickerSupported()) {
+    throw new Error('File picker not supported for loading.')
+  }
+
+  // @ts-ignore
+  const [handle] = await window.showOpenFilePicker({
+    types: [
+      {
+        description: 'JSON',
+        accept: { 'application/json': ['.json'] },
+      },
+    ],
+    multiple: false,
+  })
+  return handle
+}
 
 export async function selectSyncFolder(): Promise<{ success: boolean; error?: string }> {
   try {
     // Request directory access
     // @ts-ignore - File System Access API
     if (!window.showDirectoryPicker) {
-      return {
-        success: false,
-        error: 'File System Access API not supported. Please use Chrome, Edge, or Safari.',
-      }
+      localStorage.setItem('syncFolderName', syncFolderLabel)
+      localStorage.setItem(SYNC_MODE_KEY, 'file')
+      return { success: true }
     }
 
     // @ts-ignore
@@ -130,6 +170,7 @@ export async function selectSyncFolder(): Promise<{ success: boolean; error?: st
     // Note: The handle itself can't be stored, but we can store its name
     if (syncFolderHandle) {
       localStorage.setItem('syncFolderName', syncFolderHandle.name)
+      localStorage.setItem(SYNC_MODE_KEY, 'directory')
     }
 
     return { success: true }
@@ -144,9 +185,37 @@ export async function selectSyncFolder(): Promise<{ success: boolean; error?: st
 
 export async function saveToSyncFolder(): Promise<{ success: boolean; error?: string }> {
   if (!syncFolderHandle) {
-    return {
-      success: false,
-      error: 'No sync folder selected. Please select a folder first.',
+    const syncMode = localStorage.getItem(SYNC_MODE_KEY)
+    if (syncMode === 'file' || !isDirectoryPickerSupported()) {
+      try {
+        const jsonData = await exportAllData()
+        const fileHandle = await selectFileForSave()
+        // @ts-ignore
+        const writable = await fileHandle.createWritable()
+        await writable.write(jsonData)
+        await writable.close()
+        localStorage.setItem('lastSyncTime', new Date().toISOString())
+        return { success: true }
+      } catch (error: any) {
+        return {
+          success: false,
+          error: error.message || 'Failed to save with file picker',
+        }
+      }
+    }
+
+    const reselect = await selectSyncFolder()
+    if (!reselect.success) {
+      return {
+        success: false,
+        error: reselect.error || 'No sync folder selected. Please select a folder first.',
+      }
+    }
+    if (!syncFolderHandle) {
+      return {
+        success: false,
+        error: 'No sync folder selected. Please select a folder first.',
+      }
     }
   }
 
@@ -178,9 +247,37 @@ export async function saveToSyncFolder(): Promise<{ success: boolean; error?: st
 
 export async function loadFromSyncFolder(): Promise<{ success: boolean; error?: string; imported?: { transcriptions: number; entries: number; diaryEntries: number } }> {
   if (!syncFolderHandle) {
-    return {
-      success: false,
-      error: 'No sync folder selected. Please select a folder first.',
+    const syncMode = localStorage.getItem(SYNC_MODE_KEY)
+    if (syncMode === 'file' || !isDirectoryPickerSupported()) {
+      try {
+        const fileHandle = await selectFileForOpen()
+        const file = await fileHandle.getFile()
+        const jsonData = await file.text()
+        const result = await importData(jsonData)
+        if (result.success) {
+          localStorage.setItem('lastSyncTime', new Date().toISOString())
+        }
+        return result
+      } catch (error: any) {
+        return {
+          success: false,
+          error: error.message || 'Failed to load with file picker',
+        }
+      }
+    }
+
+    const reselect = await selectSyncFolder()
+    if (!reselect.success) {
+      return {
+        success: false,
+        error: reselect.error || 'No sync folder selected. Please select a folder first.',
+      }
+    }
+    if (!syncFolderHandle) {
+      return {
+        success: false,
+        error: 'No sync folder selected. Please select a folder first.',
+      }
     }
   }
 

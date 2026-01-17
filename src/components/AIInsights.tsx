@@ -14,6 +14,8 @@ export function AIInsights() {
     isListening,
     handleVoiceToggle,
     handleSend,
+    handleSendMessage,
+    handleClearChat,
     messagesEndRef,
     speechRecognition,
   } = useAIChat({
@@ -29,17 +31,48 @@ export function AIInsights() {
     inputRef.current?.focus()
   }, [])
 
+  const quickPrompts = [
+    'How does my day look?',
+    'What are my top priorities today?',
+    'Summarize what is due today.',
+    'Show me urgent items I should do first.',
+  ]
+
+  const handleQuickPrompt = (prompt: string) => {
+    setInput(prompt)
+    handleSendMessage(prompt)
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] max-w-4xl mx-auto p-4">
       {/* Header */}
       <div className="mb-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Sparkles className="w-6 h-6 text-primary" />
-          <h2 className="text-2xl font-bold">AI Insights</h2>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-primary" />
+            <h2 className="text-2xl font-bold">AI Insights</h2>
+          </div>
+          <button
+            onClick={handleClearChat}
+            className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+          >
+            Clear chat
+          </button>
         </div>
         <p className="text-sm text-muted-foreground">
           Chat naturally with AI. It will automatically create todos, reminders, and notes for you.
         </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {quickPrompts.map((prompt) => (
+            <button
+              key={prompt}
+              onClick={() => handleQuickPrompt(prompt)}
+              className="text-xs px-3 py-1.5 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
         {actionsCreated > 0 && (
           <div className="mt-2 flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
             <CheckCircle2 className="w-4 h-4" />
