@@ -61,8 +61,8 @@ function App() {
   return (
     <div className={cn('min-h-screen transition-colors duration-200', theme)}>
       <div className="flex flex-col h-screen">
-        {/* Header */}
-        <header className="border-b border-border bg-card px-4 py-3 flex items-center justify-between">
+        {/* Header - Sticky Navigation */}
+        <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 py-3 flex items-center justify-between shadow-sm">
           <h1 className="text-xl font-bold text-foreground">Echo Flow</h1>
           <Navigation
             currentView={currentView}

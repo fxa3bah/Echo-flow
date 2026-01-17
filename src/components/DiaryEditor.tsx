@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, CheckSquare, Square, Eye, Edit3 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CheckSquare, Square, Eye, Edit3, ChevronDown, ChevronUp } from 'lucide-react'
 import { marked } from 'marked'
 import { db } from '../lib/db'
 import { formatDate, isSameDay, cn } from '../lib/utils'
@@ -22,6 +22,11 @@ export function DiaryEditor() {
   const [renderedHtml, setRenderedHtml] = useState('')
   const saveTimeoutRef = useRef<number | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Collapsible section states
+  const [transcriptionsExpanded, setTranscriptionsExpanded] = useState(true)
+  const [tasksExpanded, setTasksExpanded] = useState(true)
+  const [notesExpanded, setNotesExpanded] = useState(true)
 
   // Slash command menu state
   const [showSlashMenu, setShowSlashMenu] = useState(false)
@@ -302,138 +307,195 @@ export function DiaryEditor() {
 
       {/* Transcriptions Section */}
       {dayTranscriptions && dayTranscriptions.length > 0 && (
-        <div className="mb-6 space-y-2">
-          <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-            Captured Notes
-          </h4>
-          {dayTranscriptions.map((transcription) => (
-            <div
-              key={transcription.id}
-              className="p-3 bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 rounded-r"
-            >
-              <p className="text-sm text-foreground">{transcription.text}</p>
-              <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
-                <span className="px-2 py-0.5 bg-background rounded">
-                  {transcription.category}
-                </span>
-                {transcription.tags?.map((tag) => (
-                  <span key={tag} className="px-2 py-0.5 bg-background rounded">
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Tasks & Reminders Section */}
-      {dayEntries && dayEntries.length > 0 && (
-        <div className="mb-6 space-y-2">
-          <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-            Tasks & Reminders
-          </h4>
-          {dayEntries.map((entry) => (
-            <div
-              key={entry.id}
-              className={cn(
-                'p-3 border-l-4 rounded-r flex items-start gap-3',
-                entry.type === 'todo'
-                  ? 'bg-green-50 dark:bg-green-950/30 border-green-500'
-                  : 'bg-purple-50 dark:bg-purple-950/30 border-purple-500'
-              )}
-            >
-              <button
-                onClick={() => handleToggleTodo(entry.id, entry.completed || false)}
-                className="mt-0.5 flex-shrink-0"
-              >
-                {entry.completed ? (
-                  <CheckSquare className="w-5 h-5 text-green-600" />
-                ) : (
-                  <Square className="w-5 h-5 text-muted-foreground" />
-                )}
-              </button>
-              <div className="flex-1">
-                <p
-                  className={cn(
-                    'text-sm',
-                    entry.completed && 'line-through text-muted-foreground'
-                  )}
+        <div className="mb-6">
+          <button
+            onClick={() => setTranscriptionsExpanded(!transcriptionsExpanded)}
+            className="w-full flex items-center justify-between mb-2 p-2 hover:bg-accent rounded transition-colors"
+          >
+            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              Captured Notes ({dayTranscriptions.length})
+            </h4>
+            {transcriptionsExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+          {transcriptionsExpanded && (
+            <div className="space-y-2">
+              {dayTranscriptions.map((transcription) => (
+                <div
+                  key={transcription.id}
+                  className="p-3 bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 rounded-r"
                 >
-                  {entry.content}
-                </p>
-                {entry.tags && entry.tags.length > 0 && (
+                  <p className="text-sm text-foreground">{transcription.text}</p>
                   <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
-                    {entry.tags.map((tag) => (
+                    <span className="px-2 py-0.5 bg-background rounded">
+                      {transcription.category}
+                    </span>
+                    {transcription.tags?.map((tag) => (
                       <span key={tag} className="px-2 py-0.5 bg-background rounded">
                         #{tag}
                       </span>
                     ))}
                   </div>
-                )}
-              </div>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+        </div>
+      )}
+
+      {/* Tasks & Reminders Section */}
+      {dayEntries && dayEntries.length > 0 && (
+        <div className="mb-6">
+          <button
+            onClick={() => setTasksExpanded(!tasksExpanded)}
+            className="w-full flex items-center justify-between mb-2 p-2 hover:bg-accent rounded transition-colors"
+          >
+            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              Tasks & Reminders ({dayEntries.filter((e) => !e.completed).length} active, {dayEntries.filter((e) => e.completed).length} done)
+            </h4>
+            {tasksExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+          {tasksExpanded && (
+            <div className="space-y-2">
+              {/* Show incomplete tasks first */}
+              {dayEntries
+                .filter((e) => !e.completed)
+                .map((entry) => (
+                  <div
+                    key={entry.id}
+                    className={cn(
+                      'p-3 border-l-4 rounded-r flex items-start gap-3',
+                      entry.type === 'todo'
+                        ? 'bg-green-50 dark:bg-green-950/30 border-green-500'
+                        : 'bg-purple-50 dark:bg-purple-950/30 border-purple-500'
+                    )}
+                  >
+                    <button
+                      onClick={() => handleToggleTodo(entry.id, entry.completed || false)}
+                      className="mt-0.5 flex-shrink-0"
+                    >
+                      <Square className="w-5 h-5 text-muted-foreground" />
+                    </button>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{entry.content}</p>
+                      {entry.tags && entry.tags.length > 0 && (
+                        <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
+                          {entry.tags.map((tag) => (
+                            <span key={tag} className="px-2 py-0.5 bg-background rounded">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              {/* Show completed tasks after */}
+              {dayEntries
+                .filter((e) => e.completed)
+                .map((entry) => (
+                  <div
+                    key={entry.id}
+                    className={cn(
+                      'p-3 border-l-4 rounded-r flex items-start gap-3 opacity-60',
+                      entry.type === 'todo'
+                        ? 'bg-green-50 dark:bg-green-950/30 border-green-500'
+                        : 'bg-purple-50 dark:bg-purple-950/30 border-purple-500'
+                    )}
+                  >
+                    <button
+                      onClick={() => handleToggleTodo(entry.id, entry.completed || false)}
+                      className="mt-0.5 flex-shrink-0"
+                    >
+                      <CheckSquare className="w-5 h-5 text-green-600" />
+                    </button>
+                    <div className="flex-1">
+                      <p className="text-sm line-through text-muted-foreground">{entry.content}</p>
+                      {entry.tags && entry.tags.length > 0 && (
+                        <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
+                          {entry.tags.map((tag) => (
+                            <span key={tag} className="px-2 py-0.5 bg-background rounded">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
         </div>
       )}
 
       {/* Notes Section */}
       <div className="space-y-2 relative">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-            Daily Notes
-          </h4>
           <button
-            onClick={() => setIsPreviewMode(!isPreviewMode)}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+            onClick={() => setNotesExpanded(!notesExpanded)}
+            className="flex items-center gap-2 p-2 hover:bg-accent rounded transition-colors"
           >
-            {isPreviewMode ? (
-              <>
-                <Edit3 size={14} />
-                Edit
-              </>
-            ) : (
-              <>
-                <Eye size={14} />
-                Preview
-              </>
-            )}
+            <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              Daily Notes
+            </h4>
+            {notesExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
-        </div>
-        <div className="border border-border rounded-lg bg-card relative">
-          {isPreviewMode ? (
-            <div
-              className="w-full p-4 min-h-[300px] prose prose-sm dark:prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: renderedHtml }}
-            />
-          ) : (
-            <>
-              <textarea
-                ref={textareaRef}
-                value={content}
-                onChange={handleContentChange}
-                placeholder="Write your thoughts for today... (Markdown supported)"
-                className="w-full p-4 bg-transparent border-none focus:outline-none resize-none min-h-[300px] font-sans text-sm"
-                style={{ overflow: 'hidden' }}
-              />
-
-              {/* Slash Command Menu */}
-              {showSlashMenu && (
-                <SlashCommandMenu
-                  filter={slashFilter}
-                  onSelect={handleSlashCommandSelect}
-                  onClose={() => setShowSlashMenu(false)}
-                  position={slashPosition}
-                />
+          {notesExpanded && (
+            <button
+              onClick={() => setIsPreviewMode(!isPreviewMode)}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+            >
+              {isPreviewMode ? (
+                <>
+                  <Edit3 size={14} />
+                  Edit
+                </>
+              ) : (
+                <>
+                  <Eye size={14} />
+                  Preview
+                </>
               )}
-            </>
+            </button>
           )}
         </div>
-        <p className="text-xs text-muted-foreground">
-          {isPreviewMode
-            ? 'Viewing formatted text. Click Edit to modify.'
-            : 'Markdown is supported. Type / for commands. Dates, todos, and reminders are auto-detected.'}
-        </p>
+        {notesExpanded && (
+          <>
+            <div className="border border-border rounded-lg bg-card relative">
+              {isPreviewMode ? (
+                <div
+                  className="w-full p-4 min-h-[300px] prose prose-sm dark:prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{ __html: renderedHtml }}
+                />
+              ) : (
+                <>
+                  <textarea
+                    ref={textareaRef}
+                    value={content}
+                    onChange={handleContentChange}
+                    placeholder="Write your thoughts for today... (Markdown supported)"
+                    className="w-full p-4 bg-transparent border-none focus:outline-none resize-none min-h-[300px] font-sans text-sm"
+                    style={{ overflow: 'hidden' }}
+                  />
+
+                  {/* Slash Command Menu */}
+                  {showSlashMenu && (
+                    <SlashCommandMenu
+                      filter={slashFilter}
+                      onSelect={handleSlashCommandSelect}
+                      onClose={() => setShowSlashMenu(false)}
+                      position={slashPosition}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {isPreviewMode
+                ? 'Viewing formatted text. Click Edit to modify.'
+                : 'Markdown is supported. Type / for commands. Dates, todos, and reminders are auto-detected.'}
+            </p>
+          </>
+        )}
       </div>
     </div>
   )
