@@ -18,6 +18,7 @@ export function VoiceRecorder() {
   const audioRecorder = useAudioRecorder()
 
   const [transcript, setTranscript] = useState('')
+  const [manualText, setManualText] = useState('')
   const [isTranscribing, setIsTranscribing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -151,10 +152,20 @@ export function VoiceRecorder() {
 
   const handleDiscard = () => {
     setTranscript('')
+    setManualText('')
     setError(null)
+    setShowManualInput(false)
     if (!useOnlineMode) {
       speechRecognition.resetTranscript()
       speechRecognition.stopListening()
+    }
+  }
+
+  const handleManualSave = () => {
+    if (manualText.trim()) {
+      setTranscript(manualText)
+      setManualText('')
+      setShowManualInput(false)
     }
   }
 
@@ -322,17 +333,34 @@ export function VoiceRecorder() {
             Type your note, task, or reminder:
           </label>
           <textarea
-            value={transcript}
-            onChange={(e) => setTranscript(e.target.value)}
+            value={manualText}
+            onChange={(e) => setManualText(e.target.value)}
             placeholder="Call Daniel tomorrow at 1pm..."
             className="w-full p-4 border border-border rounded-lg bg-background min-h-32 focus:outline-none focus:ring-2 focus:ring-primary"
             autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && e.ctrlKey) {
+                handleManualSave()
+              }
+            }}
           />
           <div className="flex gap-2">
             <button
+              onClick={handleManualSave}
+              disabled={!manualText.trim()}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 rounded-lg',
+                'bg-primary text-primary-foreground hover:bg-primary/90',
+                'transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+              )}
+            >
+              <Save size={18} />
+              Continue (Ctrl+Enter)
+            </button>
+            <button
               onClick={() => {
                 setShowManualInput(false)
-                setTranscript('')
+                setManualText('')
               }}
               className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors"
             >

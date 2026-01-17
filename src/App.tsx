@@ -6,11 +6,12 @@ import { TranscriptionsList } from './components/TranscriptionsList'
 import { CalendarView } from './components/CalendarView'
 import { EisenhowerMatrix } from './components/EisenhowerMatrix'
 import { DiaryEditor } from './components/DiaryEditor'
+import { AIInsights } from './components/AIInsights'
 import { SettingsModal } from './components/SettingsModal'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { cn } from './lib/utils'
 
-type View = 'home' | 'transcriptions' | 'calendar' | 'matrix' | 'diary'
+type View = 'home' | 'aiinsights' | 'transcriptions' | 'calendar' | 'matrix' | 'diary'
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('home')
@@ -23,6 +24,11 @@ function App() {
       key: 'r',
       ctrlKey: true,
       handler: () => setCurrentView('home'),
+    },
+    {
+      key: 'a',
+      ctrlKey: true,
+      handler: () => setCurrentView('aiinsights'),
     },
     {
       key: 't',
@@ -78,6 +84,7 @@ function App() {
             </div>
           )}
 
+          {currentView === 'aiinsights' && <AIInsights />}
           {currentView === 'transcriptions' && <TranscriptionsList />}
           {currentView === 'calendar' && <CalendarView />}
           {currentView === 'matrix' && <EisenhowerMatrix />}

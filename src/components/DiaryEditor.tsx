@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, CheckSquare, Square } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CheckSquare, Square, Eye, Edit3 } from 'lucide-react'
+import { marked } from 'marked'
 import { db } from '../lib/db'
 import { formatDate, isSameDay, cn } from '../lib/utils'
 import type { DiaryEntry } from '../types'
@@ -17,6 +18,8 @@ export function DiaryEditor() {
   const [content, setContent] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [isPreviewMode, setIsPreviewMode] = useState(false)
+  const [renderedHtml, setRenderedHtml] = useState('')
   const saveTimeoutRef = useRef<number | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -65,6 +68,17 @@ export function DiaryEditor() {
       setContent('')
     }
   }, [diaryEntry])
+
+  // Render markdown when in preview mode
+  useEffect(() => {
+    if (isPreviewMode) {
+      const renderMarkdown = async () => {
+        const html = await marked.parse(content || '*No content yet. Click Edit to start writing.*')
+        setRenderedHtml(html)
+      }
+      renderMarkdown()
+    }
+  }, [isPreviewMode, content])
 
   const handleSave = useCallback(async (newContent: string) => {
     if (!newContent || newContent.trim() === '') {
@@ -359,15 +373,40 @@ export function DiaryEditor() {
 
       {/* Notes Section */}
       <div className="space-y-2 relative">
-        <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-          Daily Notes
-        </h4>
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            Daily Notes
+          </h4>
+          <button
+            onClick={() => setIsPreviewMode(!isPreviewMode)}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+          >
+            {isPreviewMode ? (
+              <>
+                <Edit3 size={14} />
+                Edit
+              </>
+            ) : (
+              <>
+                <Eye size={14} />
+                Preview
+              </>
+            )}
+          </button>
+        </div>
         <div className="border border-border rounded-lg bg-card relative">
-          <textarea
-            ref={textareaRef}
-            value={content}
-            onChange={handleContentChange}
-            placeholder="Write your thoughts for today...
+          {isPreviewMode ? (
+            <div
+              className="w-full p-4 min-h-[300px] prose prose-sm dark:prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: renderedHtml }}
+            />
+          ) : (
+            <>
+              <textarea
+                ref={textareaRef}
+                value={content}
+                onChange={handleContentChange}
+                placeholder="Write your thoughts for today...
 
 Markdown shortcuts:
 - Type / for commands menu
@@ -376,22 +415,26 @@ Markdown shortcuts:
 - - Bullet list, 1. Numbered list
 - [ ] Todo, [x] Done
 - Type naturally: tomorrow, next week, call John, etc."
-            className="w-full p-4 bg-transparent border-none focus:outline-none resize-none min-h-[300px] font-mono text-sm"
-            style={{ overflow: 'hidden' }}
-          />
+                className="w-full p-4 bg-transparent border-none focus:outline-none resize-none min-h-[300px] font-mono text-sm"
+                style={{ overflow: 'hidden' }}
+              />
 
-          {/* Slash Command Menu */}
-          {showSlashMenu && (
-            <SlashCommandMenu
-              filter={slashFilter}
-              onSelect={handleSlashCommandSelect}
-              onClose={() => setShowSlashMenu(false)}
-              position={slashPosition}
-            />
+              {/* Slash Command Menu */}
+              {showSlashMenu && (
+                <SlashCommandMenu
+                  filter={slashFilter}
+                  onSelect={handleSlashCommandSelect}
+                  onClose={() => setShowSlashMenu(false)}
+                  position={slashPosition}
+                />
+              )}
+            </>
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          Type <kbd className="px-1 py-0.5 bg-muted rounded text-xs">/</kbd> for markdown commands. Dates, todos, and reminders are auto-detected.
+          {isPreviewMode
+            ? 'Viewing rendered markdown. Click Edit to modify.'
+            : 'Type / for markdown commands. Dates, todos, and reminders are auto-detected.'}
         </p>
       </div>
     </div>
