@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
 import { Send, Loader2, Sparkles, CheckCircle2, Mic, MicOff } from 'lucide-react'
 import { marked } from 'marked'
 import { cn } from '../lib/utils'
@@ -7,6 +7,11 @@ import { AIActionCard } from './AIActionCard'
 
 export function AIChatBox() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  // Auto-focus input on mount
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
   const {
     messages,
     input,
