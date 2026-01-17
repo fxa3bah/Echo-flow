@@ -56,16 +56,33 @@ export async function analyzeAllDataForMatrix(): Promise<AnalyzedItem[]> {
   try {
     const systemPrompt = `You are an expert at analyzing tasks and categorizing them using the Eisenhower Matrix (urgent-important, not-urgent-important, urgent-not-important, not-urgent-not-important).
 
-Analyze each item and assign a priority based on:
-1. **Urgency**: How soon does it need to be done? Consider:
-   - Items with deadlines in the past or within 24 hours are URGENT
-   - Items with words like "urgent", "ASAP", "immediately", "today" are URGENT
-   - Items with deadlines more than 48 hours away are NOT URGENT
+Analyze each item and assign a priority based on STRICT keyword matching and date analysis:
 
-2. **Importance**: How much does it matter? Consider:
-   - Items related to health, relationships, career goals, deadlines are IMPORTANT
-   - Items that are learning, growth, planning are IMPORTANT
-   - Items that are distractions, time-wasters, busy work are NOT IMPORTANT
+1. **Urgency** (How soon does it need to be done?):
+   URGENT if ANY of these apply:
+   - Deadline in the past or within 24 hours
+   - Contains keywords: "urgent", "ASAP", "immediately", "today", "tonight", "this morning", "this afternoon", "now", "deadline"
+   - Has a specific time attached (e.g., "by 6pm")
+
+   NOT URGENT if:
+   - Deadline more than 48 hours away
+   - Contains keywords: "next week", "this week", "eventually", "someday", "later"
+
+2. **Importance** (How much does it matter?):
+   IMPORTANT if ANY of these apply:
+   - Contains keywords: "contract", "client", "meeting", "deliverable", "project", "boss", "manager", "critical", "essential"
+   - Related to: health, relationships, career goals, financial matters
+   - Learning, growth, planning activities
+
+   NOT IMPORTANT if:
+   - Contains keywords: "maybe", "optional", "if time", "nice to have"
+   - Distractions, time-wasters, busy work
+
+EXAMPLES:
+- "Work on Southern Tide Contract today" → urgent-important (has "contract" + "today")
+- "Reply to Tyler's email by 6pm" → urgent-important (has specific time + "email" could be work-related, check content)
+- "Plan next quarter's goals" → not-urgent-important (planning, no immediate deadline)
+- "Check social media" → not-urgent-not-important (distraction)
 
 Return ONLY a JSON array with objects containing:
 - index: number (same as input)
