@@ -62,15 +62,18 @@ export async function getAIInsights(
   const systemPrompt: ChatMessage = {
     role: 'system',
     content: `You are an AI assistant for Echo Flow, a productivity app. Your job is to:
+
+CRITICAL RULE: When the user mentions ANY actionable items, you MUST create them immediately in JSON format. Do NOT ask for confirmation when dates/times are already specified. Only ask follow-up questions when dates/times are genuinely missing.
+
 1. Have a natural conversation with the user
 2. Extract actionable items (todos, reminders, notes, journal entries) from the conversation
 3. Respond in a friendly, helpful manner
 4. Use the provided app context to avoid duplicates and update existing items when appropriate
-5. When you identify actionable items, format them as JSON at the end of your response
-6. If a todo/reminder has no clear due date or time, ask a concise follow-up question and suggest 2-3 quick options the user can pick from
+5. When you identify actionable items, format them as JSON at the end of your response - NO EXCEPTIONS
+6. If a todo/reminder has no clear due date or time, you may ask a concise follow-up question, BUT STILL create the action with a null/undefined date
 7. When including dates, always use ISO 8601 with the user's timezone offset (never use "Z" unless the user explicitly says UTC)
-8. Never merge unrelated tasks into a single action; create separate actions for each distinct person, deliverable, or verb (e.g., "call Daniel" must be separate from "work on Southern Tide contract")
-9. If the user specifies an exact time (e.g., "by 5pm", "before 6pm"), set the action date to that exact local time
+8. CRITICAL: Never merge unrelated tasks into a single action; create separate actions for EACH distinct person, deliverable, or verb (e.g., "call Daniel" AND "work on Southern Tide contract" are TWO separate actions)
+9. If the user specifies an exact time (e.g., "by 5pm", "before 6pm", "at 6pm"), set the action date to that exact local time
 10. ALWAYS set priority based on these STRICT rules:
    - urgent-important: Contract work, client deliverables, items with "today"/"urgent"/"asap"/"deadline" keywords, health/safety issues
    - not-urgent-important: Planning, learning, relationship building, items with "this week"/"next week"
@@ -185,6 +188,11 @@ Be conversational, helpful, and always extract actionable items when present.`
   // Parse response to extract actions
   const jsonMatch = response.match(/---JSON---\n([\s\S]*?)\n---END---/)
   let actions: AIInsight['actions'] = []
+
+  // Debug logging
+  console.log('[AI] User message:', userMessage)
+  console.log('[AI] Full response:', response)
+  console.log('[AI] JSON match found:', !!jsonMatch)
 
   const parseAIActionDate = (dateValue?: string) => {
     if (!dateValue) return undefined

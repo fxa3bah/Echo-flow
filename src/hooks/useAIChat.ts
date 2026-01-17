@@ -142,10 +142,22 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     const time = extractTimeFromMessage(message)
     const next = [...actions]
 
+    console.log('[normalizeActions] Input actions:', actions)
+    console.log('[normalizeActions] Message:', message)
+    console.log('[normalizeActions] Extracted time:', time)
+
     const hasReply = actions.some((action) => /reply|respond|email/i.test(`${action.title} ${action.content}`))
+    console.log('[normalizeActions] hasReply:', hasReply)
+    console.log('[normalizeActions] Should create reply?', (lower.includes('reply') || lower.includes('email')) && !hasReply)
+
     if ((lower.includes('reply') || lower.includes('email')) && !hasReply) {
-      const nameMatch = message.match(/reply to\s+([a-zA-Z]+)(?:'s)?\s+email/i)
-      const person = nameMatch ? nameMatch[1] : 'their'
+      // Match variations: "reply to Tyler's email", "reply to tylers email", "reply to Tyler email"
+      // Try multiple patterns to catch different formats
+      let nameMatch = message.match(/reply to\s+([a-zA-Z]+)'s\s+email/i) ||  // "Tyler's email"
+                      message.match(/reply to\s+([a-zA-Z]+)s\s+email/i) ||   // "tylers email"
+                      message.match(/reply to\s+([a-zA-Z]+)\s+email/i)       // "Tyler email"
+      const person = nameMatch ? nameMatch[1].charAt(0).toUpperCase() + nameMatch[1].slice(1).toLowerCase() : 'their'
+      console.log('[normalizeActions] Reply - nameMatch:', nameMatch, 'person:', person)
       // Match either "on the subject of X" or "about X" or just extract context after "email"
       const subjectMatch = message.match(/(?:on the subject(?:\s+of)?\s+|about\s+)(.+?)(?:\s+before|\s+by|\s+at|\s+and|$)/i) ||
         message.match(/email\s+(?:on the subject|about)?\s*(.+?)(?:\s+before|\s+by|\s+at|\s+and|$)/i)
@@ -156,6 +168,7 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
       }
       const replyTitle = `Reply to ${person}'s email`
       const replyContent = subject ? `Reply to ${person}'s email about ${subject}` : `Reply to ${person}'s email`
+      console.log('[normalizeActions] Creating reply action:', { replyTitle, replyContent, time, date: time ? replyDate : undefined })
       next.push({
         type: 'reminder',
         title: replyTitle,
@@ -197,6 +210,8 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
       })
     }
 
+    console.log('[normalizeActions] Actions after supplementary additions:', next)
+
     return next.map((action) => {
       const titleContent = `${action.title} ${action.content}`
       let updatedAction = { ...action }
@@ -221,6 +236,20 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     })
   }
 
+  // Add logging just before normalizeActions is called in sendMessage
+  const logActions = (label: string, actions: AIAction[]) => {
+    console.log(`[${label}] Total actions:`, actions.length)
+    actions.forEach((action, i) => {
+      console.log(`[${label}] Action ${i + 1}:`, {
+        type: action.type,
+        title: action.title,
+        date: action.date,
+        priority: action.priority,
+        tags: action.tags
+      })
+    })
+  }
+
   const sendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isLoading) return
 
@@ -242,7 +271,14 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
       const contextSummary = await buildAIContextSummary()
       const insight = await getAIInsights(trimmedMessage, conversationHistory, contextSummary)
 
+      console.log('[useAIChat] AI returned actions:', insight.actions)
+      logActions('Before normalize', insight.actions)
+
       const normalizedActions = normalizeActions(trimmedMessage, insight.actions)
+
+      console.log('[useAIChat] After normalization:', normalizedActions)
+      logActions('After normalize', normalizedActions)
+
       const { pendingActions, followUpPrompt } = buildPendingState(normalizedActions)
 
       // Store actions as pending instead of auto-applying
