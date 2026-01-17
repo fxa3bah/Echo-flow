@@ -19,10 +19,10 @@ export function Navigation({ currentView, onViewChange, onOpenSettings }: Naviga
 
   const navItems = [
     { id: 'home' as View, icon: Home, label: 'Record' },
+    { id: 'diary' as View, icon: BookOpen, label: 'Daily Notes' },
     { id: 'transcriptions' as View, icon: FileText, label: 'Transcriptions' },
     { id: 'calendar' as View, icon: Calendar, label: 'Calendar' },
     { id: 'matrix' as View, icon: Grid3x3, label: 'Matrix' },
-    { id: 'diary' as View, icon: BookOpen, label: 'Diary' },
   ]
 
   return (

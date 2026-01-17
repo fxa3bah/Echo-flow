@@ -49,7 +49,30 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
 
     recognition.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error)
-      setError(`Recognition error: ${event.error}`)
+
+      let errorMessage = 'Recognition error'
+      switch (event.error) {
+        case 'network':
+          errorMessage = 'Network error: Please check your internet connection and try again.'
+          break
+        case 'not-allowed':
+          errorMessage = 'Microphone access denied. Please allow microphone access in your browser settings.'
+          break
+        case 'no-speech':
+          errorMessage = 'No speech detected. Please try speaking again.'
+          setIsListening(false)
+          return // Don't show error for no speech
+        case 'audio-capture':
+          errorMessage = 'No microphone found. Please connect a microphone and try again.'
+          break
+        case 'service-not-allowed':
+          errorMessage = 'Speech recognition service is not available. Try using OpenAI Whisper instead.'
+          break
+        default:
+          errorMessage = `Recognition error: ${event.error}`
+      }
+
+      setError(errorMessage)
       setIsListening(false)
     }
 
@@ -66,16 +89,37 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
     }
   }, [isSupported])
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     if (!recognitionRef.current) return
 
     try {
       setError(null)
+
+      // Request microphone permission first
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true })
+      } catch (permError: any) {
+        console.error('Microphone permission error:', permError)
+        if (permError.name === 'NotAllowedError') {
+          setError('Microphone access denied. Please allow microphone access in your browser settings.')
+        } else if (permError.name === 'NotFoundError') {
+          setError('No microphone found. Please connect a microphone and try again.')
+        } else {
+          setError('Failed to access microphone. Please check your browser permissions.')
+        }
+        return
+      }
+
       recognitionRef.current.start()
       setIsListening(true)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error starting recognition:', err)
-      setError('Failed to start recording')
+      if (err.message && err.message.includes('already started')) {
+        // Recognition is already running, just update state
+        setIsListening(true)
+      } else {
+        setError('Failed to start recording. Please refresh the page and try again.')
+      }
     }
   }, [])
 
