@@ -101,6 +101,29 @@ export async function getAIInsights(
 
 7. TAGS: Auto-generate relevant tags from the content (names, topics, keywords)
 
+8. 📋 FORMATTING SUMMARY RESPONSES:
+   When user asks "What are my top priorities?", "How does my day look?", "Summarize what is due today":
+   - Format with **markdown** for better readability
+   - Use emoji icons: 🎯 urgent-important, 📅 not-urgent-important, ⚡ urgent-not-important
+   - Show task title in **bold**
+   - Include due date/time and priority
+   - Use bullet points (•) for details
+
+   Example:
+   "Based on your tasks, here are your top priorities today:
+
+   🎯 **Work on Southern Tide Contract**
+   • Due: Today at 9:00 AM
+   • Priority: Urgent & Important
+
+   🎯 **Reply to Tyler's email**
+   • Due: Today at 6:00 PM
+   • Priority: Urgent & Important
+
+   📅 **Follow up with SM from KKP**
+   • Due: This week
+   • Priority: Important"
+
 ⚠️ PARSING EXAMPLES YOU MUST FOLLOW:
 
 Input: "Work on southern tide contract today and reply to tylers email by 6pm"

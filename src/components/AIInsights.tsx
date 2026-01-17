@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Send, Loader2, Sparkles, CheckCircle2, Mic, MicOff } from 'lucide-react'
+import { marked } from 'marked'
 import { cn } from '../lib/utils'
 import { useAIChat } from '../hooks/useAIChat'
 
@@ -41,6 +42,11 @@ export function AIInsights() {
   const handleQuickPrompt = (prompt: string) => {
     setInput(prompt)
     handleSendMessage(prompt)
+  }
+
+  const renderMarkdown = (content: string) => {
+    const html = marked.parse(content, { async: false }) as string
+    return html
   }
 
   return (
@@ -104,7 +110,14 @@ export function AIInsights() {
                   : 'bg-card border border-border'
               )}
             >
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              {message.role === 'assistant' ? (
+                <div
+                  className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 text-sm"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
+                />
+              ) : (
+                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              )}
               {message.actions && message.actions.length > 0 && (
                 <div className="mt-2 pt-2 border-t border-border space-y-1">
                   {message.actions.map((action, i) => (
