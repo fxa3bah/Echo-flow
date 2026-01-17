@@ -16,6 +16,7 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
   const [error, setError] = useState<string | null>(null)
   const recognitionRef = useRef<any | null>(null)
   const finalTranscriptRef = useRef('')
+  const silenceTimerRef = useRef<number | null>(null)
 
   const isSupported = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window
 
@@ -52,6 +53,13 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
 
       // Update display with final + interim results
       setTranscript(finalTranscript + interimTranscript)
+
+      if (silenceTimerRef.current) {
+        window.clearTimeout(silenceTimerRef.current)
+      }
+      silenceTimerRef.current = window.setTimeout(() => {
+        recognition.stop()
+      }, 1500)
     }
 
     recognition.onerror = (event: any) => {
@@ -85,6 +93,10 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
 
     recognition.onend = () => {
       setIsListening(false)
+      if (silenceTimerRef.current) {
+        window.clearTimeout(silenceTimerRef.current)
+        silenceTimerRef.current = null
+      }
     }
 
     recognitionRef.current = recognition
@@ -92,6 +104,9 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.stop()
+      }
+      if (silenceTimerRef.current) {
+        window.clearTimeout(silenceTimerRef.current)
       }
     }
   }, [isSupported])
@@ -136,6 +151,10 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
     try {
       recognitionRef.current.stop()
       setIsListening(false)
+      if (silenceTimerRef.current) {
+        window.clearTimeout(silenceTimerRef.current)
+        silenceTimerRef.current = null
+      }
     } catch (err) {
       console.error('Error stopping recognition:', err)
     }

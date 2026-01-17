@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { getAIInsights, type ChatMessage } from '../services/groqChatService'
 import { useSpeechRecognition } from './useSpeechRecognition'
-import { applyAIActions, appendToDiaryEntry, buildAIContextSummary, type AIAction } from '../services/aiActions'
+import { applyAIActions, buildAIContextSummary, type AIAction } from '../services/aiActions'
 
 export interface AIChatMessage {
   role: 'user' | 'assistant'
@@ -22,6 +22,7 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
   const [actionsCreated, setActionsCreated] = useState(0)
   const [isListening, setIsListening] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const storageKeyRef = useRef('echo-flow-ai-chat')
 
   const speechRecognition = useSpeechRecognition()
 
@@ -33,6 +34,28 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const stored = window.localStorage.getItem(storageKeyRef.current)
+      if (stored) {
+        setMessages(JSON.parse(stored) as AIChatMessage[])
+      } else if (initialMessages.length > 0) {
+        setMessages(initialMessages)
+      }
+    } catch {
+      if (initialMessages.length > 0) {
+        setMessages(initialMessages)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(storageKeyRef.current, JSON.stringify(messages))
   }, [messages])
 
   const handleVoiceToggle = () => {
@@ -91,10 +114,7 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
         },
       ])
 
-      // Auto-append chat to diary only when no actionable items were created
-      if (insight.actions.length === 0) {
-        await appendToDiaryEntry(new Date(), `### AI Chat\n${trimmedMessage}`)
-      }
+      // No automatic diary append; entries are created when actions are accepted.
     } catch (error: any) {
       setMessages((prev) => [
         ...prev,
@@ -116,6 +136,13 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
   const handleSendMessage = async (message: string) => {
     if (isLoading) return
     await sendMessage(message)
+  }
+
+  const handleClearChat = () => {
+    setMessages(initialMessages)
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(storageKeyRef.current)
+    }
   }
 
   const handleAcceptAction = async (messageIndex: number, actionIndex: number, action: AIAction) => {
@@ -231,6 +258,7 @@ export function useAIChat({ initialMessages = [] }: UseAIChatOptions = {}) {
     handleAcceptAll,
     handleUpdatePendingAction,
     handleSendMessage,
+    handleClearChat,
     messagesEndRef,
     speechRecognition,
   }

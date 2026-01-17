@@ -15,6 +15,7 @@ export function AIInsights() {
     handleVoiceToggle,
     handleSend,
     handleSendMessage,
+    handleClearChat,
     messagesEndRef,
     speechRecognition,
   } = useAIChat({
@@ -46,9 +47,17 @@ export function AIInsights() {
     <div className="flex flex-col h-[calc(100vh-8rem)] max-w-4xl mx-auto p-4">
       {/* Header */}
       <div className="mb-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Sparkles className="w-6 h-6 text-primary" />
-          <h2 className="text-2xl font-bold">AI Insights</h2>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-primary" />
+            <h2 className="text-2xl font-bold">AI Insights</h2>
+          </div>
+          <button
+            onClick={handleClearChat}
+            className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+          >
+            Clear chat
+          </button>
         </div>
         <p className="text-sm text-muted-foreground">
           Chat naturally with AI. It will automatically create todos, reminders, and notes for you.

@@ -20,6 +20,7 @@ export function AIChatBox() {
     handleAcceptAll,
     handleUpdatePendingAction,
     handleSendMessage,
+    handleClearChat,
     messagesEndRef,
     speechRecognition,
   } = useAIChat({
@@ -75,6 +76,12 @@ export function AIChatBox() {
           <Sparkles className="w-5 h-5 text-primary" />
           <h3 className="text-lg font-semibold">AI Chat</h3>
         </div>
+        <button
+          onClick={handleClearChat}
+          className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+        >
+          Clear chat
+        </button>
         {actionsCreated > 0 && (
           <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400">
             <CheckCircle2 className="w-4 h-4" />
