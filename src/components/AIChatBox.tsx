@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { Send, Loader2, Sparkles, CheckCircle2, Mic, MicOff } from 'lucide-react'
+import { marked } from 'marked'
 import { cn } from '../lib/utils'
 import { useAIChat } from '../hooks/useAIChat'
 import { AIActionCard } from './AIActionCard'
@@ -42,6 +43,11 @@ export function AIChatBox() {
   const handleQuickPrompt = (prompt: string) => {
     setInput(prompt)
     handleSendMessage(prompt)
+  }
+
+  const renderMarkdown = (content: string) => {
+    const html = marked.parse(content, { async: false }) as string
+    return html
   }
 
   const quickDueOptions = [
@@ -110,7 +116,14 @@ export function AIChatBox() {
                 message.role === 'user' ? 'bg-primary text-primary-foreground ml-6' : 'bg-card border border-border mr-6'
               )}
             >
-              <p className="whitespace-pre-wrap">{message.content}</p>
+              {message.role === 'assistant' ? (
+                <div
+                  className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
+                />
+              ) : (
+                <p className="whitespace-pre-wrap">{message.content}</p>
+              )}
             </div>
 
             {/* Pending Actions - Show action cards for user to confirm */}
