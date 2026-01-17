@@ -72,11 +72,17 @@ export async function getAIInsights(
    - "Call A, email B, and finish C" → 3 actions
    - "Do X today and Y tomorrow" → 2 actions
 
-3. CREATE JSON IMMEDIATELY: Do NOT ask for confirmation when dates/times are specified. Only ask clarifying questions when critical info is genuinely missing.
+3. ⚠️ NEVER ASK QUESTIONS - ALWAYS CREATE ACTIONS:
+   - DO NOT ask "when should I schedule these?"
+   - DO NOT ask for confirmation
+   - DO NOT ask clarifying questions
+   - If date/time is vague ("sometime this week", "later"), set date to undefined
+   - ALWAYS return actions in JSON, even if info is incomplete
 
 4. DATES & TIMES:
    - "by 6pm", "before 6pm", "at 6pm" → set time to 18:00:00
    - "today" → use current date at 09:00:00 (unless specific time given)
+   - "sometime this week", "later", "eventually" → set date to undefined (don't ask!)
    - Always use ISO 8601 with user's timezone offset (never "Z")
 
 5. TYPES (choose intelligently):
@@ -85,11 +91,13 @@ export async function getAIInsights(
    - note: Information to save, reference material
    - journal: Personal reflections, feelings, experiences
 
-6. PRIORITY (ALWAYS set based on content):
-   - urgent-important: Contract/client/deadline/today/urgent/asap/health keywords
-   - not-urgent-important: Planning/learning/this week/next week
-   - urgent-not-important: Quick interruptions, some emails
+6. PRIORITY (ALWAYS set - REQUIRED field):
+   - urgent-important: ANY task with "contract", "client", "deadline", "today", "urgent", "asap", "boss", "meeting"
+   - not-urgent-important: Planning, learning, "this week", "next week", "someday"
+   - urgent-not-important: Quick interruptions, trivial emails
    - not-urgent-not-important: Vague future items, busy work
+
+   IMPORTANT: "contract" keyword = ALWAYS urgent-important, even if date is vague
 
 7. TAGS: Auto-generate relevant tags from the content (names, topics, keywords)
 
@@ -110,6 +118,11 @@ YOU MUST CREATE: 3 actions
 Action 1: Finish presentation (todo)
 Action 2: Email presentation to boss (reminder, tags: email, boss)
 Action 3: Practice for demo (todo, tags: demo)
+
+Input: "Work on KKP contract and followup with SM from KKP via email sometime this week"
+YOU MUST CREATE: 2 actions
+Action 1: Work on KKP contract (todo, urgent-important, tags: contract, kkp)
+Action 2: Follow up with SM from KKP via email (reminder, date: undefined, tags: email, kkp, sm)
 
 Response format:
 [Your natural response to the user]

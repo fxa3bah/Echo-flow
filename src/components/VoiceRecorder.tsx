@@ -102,32 +102,38 @@ export function VoiceRecorder() {
 
     setIsSaving(true)
     try {
-      // Analyze the text with AI
-      const analysis = await aiService.analyzeText(transcript)
+      // Use Groq AI for intelligent parsing (same as AI Chat)
+      const { getAIInsights } = await import('../services/groqChatService')
+      const { applyAIActions } = await import('../services/aiActions')
 
-      // Map old category to new type
-      const entryType = analysis.category === 'journal' ? 'journal' :
-                        analysis.category === 'note' ? 'note' :
-                        analysis.category === 'todo' ? 'todo' :
-                        analysis.category === 'reminder' ? 'reminder' : 'voice'
+      console.log('[VoiceRecorder] Sending to Groq AI:', transcript)
 
-      // Save to unified entries table
-      const entry: Entry = {
-        id: crypto.randomUUID(),
-        type: entryType,
-        source: 'voice',
-        content: transcript,
-        title: analysis.suggestedTitle || undefined,
-        date: analysis.suggestedDate || new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        tags: analysis.tags,
-        priority: analysis.priority,
-        completed: false,
-        processed: true,
+      const insight = await getAIInsights(transcript, [], '')
+
+      console.log('[VoiceRecorder] AI returned actions:', insight.actions)
+
+      if (insight.actions && insight.actions.length > 0) {
+        // Apply actions using the same logic as AI Chat
+        await applyAIActions(insight.actions)
+        console.log(`[VoiceRecorder] Created ${insight.actions.length} action(s) from voice input`)
+      } else {
+        // Fallback: create a single voice entry if no actions extracted
+        console.log('[VoiceRecorder] No actions extracted, creating voice entry')
+        const entry: Entry = {
+          id: crypto.randomUUID(),
+          type: 'voice',
+          source: 'voice',
+          content: transcript,
+          title: transcript.substring(0, 50) + (transcript.length > 50 ? '...' : ''),
+          date: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          tags: [],
+          completed: false,
+          processed: true,
+        }
+        await db.entries.add(entry)
       }
-
-      await db.entries.add(entry)
 
       setSaveSuccess(true)
       setTranscript('')
@@ -135,7 +141,7 @@ export function VoiceRecorder() {
       setTimeout(() => setSaveSuccess(false), 2000)
     } catch (error) {
       console.error('Failed to save transcription:', error)
-      setError('Failed to save transcription')
+      setError('Failed to save transcription. Make sure VITE_GROQ_API_KEY is configured.')
     } finally {
       setIsSaving(false)
     }
