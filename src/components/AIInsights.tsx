@@ -95,39 +95,26 @@ export function AIInsights() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-4 bg-muted/30 rounded-lg">
         {messages.map((message, index) => (
-          <div
-            key={index}
-            className={cn(
-              'flex gap-3',
-              message.role === 'user' ? 'justify-end' : 'justify-start'
-            )}
-          >
-            {message.role === 'assistant' && (
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-primary-foreground" />
-              </div>
-            )}
+          <div key={index} className="space-y-2">
             <div
               className={cn(
-                'max-w-[70%] rounded-lg p-3',
-                message.role === 'user'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-card border border-border'
+                'rounded-lg p-3 text-sm',
+                message.role === 'user' ? 'bg-primary text-primary-foreground ml-12' : 'bg-card border border-border mr-12'
               )}
             >
               {message.role === 'assistant' ? (
                 <div
-                  className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 text-sm"
+                  className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5"
                   dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
                 />
               ) : (
-                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                <p className="whitespace-pre-wrap">{message.content}</p>
               )}
             </div>
 
             {/* Pending Actions - Show action cards for user to confirm */}
             {message.pendingActions && message.pendingActions.length > 0 && (
-              <div className="space-y-2 max-w-[70%]">
+              <div className="space-y-2 mr-12">
                 {message.pendingActions.some(
                   (action, actionIdx) =>
                     !message.rejectedActionIndices?.includes(actionIdx) &&
@@ -213,11 +200,6 @@ export function AIInsights() {
                     isRejected={message.rejectedActionIndices?.includes(actionIdx)}
                   />
                 ))}
-              </div>
-            )}
-            {message.role === 'user' && (
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
-                <span className="text-sm font-medium">You</span>
               </div>
             )}
           </div>
