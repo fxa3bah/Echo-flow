@@ -4,16 +4,15 @@ import { VoiceRecorder } from './components/VoiceRecorder'
 import { Navigation } from './components/Navigation'
 import { AllEntries } from './components/AllEntries'
 import { CalendarView } from './components/CalendarView'
-import { EisenhowerMatrix } from './components/EisenhowerMatrix'
+import { FocusView } from './components/FocusView'
 import { DiaryEditor } from './components/DiaryEditor'
 import { AIInsights } from './components/AIInsights'
-import { AIChatBox } from './components/AIChatBox'
 import { SettingsModal } from './components/SettingsModal'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useReminderNotifications } from './hooks/useReminderNotifications'
 import { cn } from './lib/utils'
 
-type View = 'home' | 'aiinsights' | 'entries' | 'calendar' | 'matrix' | 'diary'
+type View = 'home' | 'aiinsights' | 'entries' | 'calendar' | 'focus' | 'diary'
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('home')
@@ -38,9 +37,9 @@ function App() {
       handler: () => setCurrentView('entries'),
     },
     {
-      key: 'm',
+      key: 'f',
       ctrlKey: true,
-      handler: () => setCurrentView('matrix'),
+      handler: () => setCurrentView('focus'),
     },
     {
       key: 'd',
@@ -75,18 +74,31 @@ function App() {
               <div className="text-center mb-8">
                 <h2 className="text-3xl font-bold mb-2">Capture Your Thoughts</h2>
                 <p className="text-muted-foreground">
-                  Tap the button below to start voice recording
+                  Voice record or use AI Chat to quickly capture tasks, notes, and ideas
                 </p>
               </div>
               <VoiceRecorder />
-              <AIChatBox />
+
+              {/* AI Chat Link */}
+              <div className="mt-8 p-6 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20">
+                <h3 className="text-lg font-semibold mb-2">Need AI assistance?</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Chat with AI to organize tasks, get insights, and manage your day
+                </p>
+                <button
+                  onClick={() => setCurrentView('aiinsights')}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  Open AI Chat
+                </button>
+              </div>
             </div>
           )}
 
           {currentView === 'aiinsights' && <AIInsights />}
           {currentView === 'entries' && <AllEntries />}
           {currentView === 'calendar' && <CalendarView />}
-          {currentView === 'matrix' && <EisenhowerMatrix />}
+          {currentView === 'focus' && <FocusView />}
           {currentView === 'diary' && <DiaryEditor />}
         </main>
       </div>
