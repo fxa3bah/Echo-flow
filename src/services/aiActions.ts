@@ -184,13 +184,30 @@ export async function buildAIContextSummary(date = new Date()): Promise<string> 
     return 'Today\'s context: No entries yet'
   }
 
-  const entryLines = entries.map((entry) => {
-    const title = entry.title || entry.content.slice(0, 50)
-    return `- [${entry.type}] ${title}: ${entry.content.slice(0, 100)}`
-  })
+  // Separate diary entries for better organization
+  const diaryEntries = entries.filter(e => e.type === 'diary')
+  const otherEntries = entries.filter(e => e.type !== 'diary')
 
-  return [
-    'Today\'s context:',
-    entryLines.join('\n'),
-  ].join('\n')
+  const sections: string[] = ['Today\'s context:']
+
+  // Show diary entries first with more detail (important reflections/notes)
+  if (diaryEntries.length > 0) {
+    sections.push('\n📔 Daily Diary:')
+    diaryEntries.forEach((entry) => {
+      // Show more content for diary entries (300 chars instead of 100)
+      sections.push(`${entry.content.slice(0, 300)}${entry.content.length > 300 ? '...' : ''}`)
+    })
+  }
+
+  // Then show other entries (todos, reminders, notes, voice)
+  if (otherEntries.length > 0) {
+    sections.push('\n📋 Tasks & Notes:')
+    otherEntries.forEach((entry) => {
+      const title = entry.title || entry.content.slice(0, 50)
+      const statusIcon = entry.completed ? '✅' : (entry.type === 'reminder' ? '⏰' : '•')
+      sections.push(`${statusIcon} [${entry.type}] ${title}: ${entry.content.slice(0, 100)}`)
+    })
+  }
+
+  return sections.join('\n')
 }

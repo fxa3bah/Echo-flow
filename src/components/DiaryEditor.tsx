@@ -339,10 +339,10 @@ export function DiaryEditor() {
                   key={transcription.id}
                   className="p-3 bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 rounded-r"
                 >
-                  <p className="text-sm text-foreground">{transcription.text}</p>
+                  <p className="text-sm text-foreground">{transcription.content}</p>
                   <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
                     <span className="px-2 py-0.5 bg-background rounded">
-                      {transcription.category}
+                      {transcription.type}
                     </span>
                     {transcription.tags?.map((tag) => (
                       <span key={tag} className="px-2 py-0.5 bg-background rounded">

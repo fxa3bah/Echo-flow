@@ -233,7 +233,7 @@ export function CalendarView() {
             </button>
           </div>
 
-          {!entries?.length && !transcriptions?.length && !diaryEntry ? (
+          {!entries?.length && !voiceEntries?.length && !diaryEntry ? (
             <div className="text-center py-12 bg-muted rounded-lg">
               <p className="text-muted-foreground">No entries for this date</p>
             </div>
