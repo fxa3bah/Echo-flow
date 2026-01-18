@@ -1,0 +1,175 @@
+import { useLiveQuery } from 'dexie-react-hooks'
+import { CheckCircle2, Circle, Clock, Flame, Calendar, Moon } from 'lucide-react'
+import { db } from '../lib/db'
+import { cn } from '../lib/utils'
+import type { Entry } from '../types'
+
+interface TimeHorizonSection {
+  id: 'now' | 'week' | 'later'
+  title: string
+  description: string
+  icon: typeof Flame
+  color: string
+  filter: (entry: Entry, now: Date) => boolean
+}
+
+const timeHorizons: TimeHorizonSection[] = [
+  {
+    id: 'now',
+    title: 'Do Now',
+    description: 'Next 24 hours',
+    icon: Flame,
+    color: 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800',
+    filter: (entry, now) => {
+      if (!entry.date) return false
+      const hoursDiff = (entry.date.getTime() - now.getTime()) / (1000 * 60 * 60)
+      return hoursDiff >= -24 && hoursDiff <= 24
+    },
+  },
+  {
+    id: 'week',
+    title: 'This Week',
+    description: 'Next 7 days',
+    icon: Calendar,
+    color: 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800',
+    filter: (entry, now) => {
+      if (!entry.date) return false
+      const daysDiff = (entry.date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      return daysDiff > 1 && daysDiff <= 7
+    },
+  },
+  {
+    id: 'later',
+    title: 'Later',
+    description: 'Backlog',
+    icon: Moon,
+    color: 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800',
+    filter: (entry, now) => {
+      if (!entry.date) return true // No date = backlog
+      const daysDiff = (entry.date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      return daysDiff > 7
+    },
+  },
+]
+
+export function FocusView() {
+  const entries = useLiveQuery(async () => {
+    return db.entries
+      .filter((entry) => (entry.type === 'todo' || entry.type === 'reminder') && !entry.completed)
+      .toArray()
+  })
+
+  const handleToggleComplete = async (entry: Entry) => {
+    await db.entries.update(entry.id, {
+      completed: !entry.completed,
+      updatedAt: new Date(),
+    })
+  }
+
+  const now = new Date()
+
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">Focus View</h1>
+        <p className="text-muted-foreground">
+          AI-organized tasks by time horizon
+        </p>
+      </div>
+
+      <div className="space-y-6">
+        {timeHorizons.map((horizon) => {
+          const Icon = horizon.icon
+          const sectionEntries = entries?.filter((e) => horizon.filter(e, now)) || []
+
+          return (
+            <div
+              key={horizon.id}
+              className={cn(
+                'rounded-lg border p-6 transition-all',
+                horizon.color
+              )}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <Icon className="w-6 h-6" />
+                  <div>
+                    <h2 className="text-xl font-semibold">{horizon.title}</h2>
+                    <p className="text-sm text-muted-foreground">{horizon.description}</p>
+                  </div>
+                </div>
+                <div className="text-sm font-medium px-3 py-1 bg-background rounded-full">
+                  {sectionEntries.length} {sectionEntries.length === 1 ? 'task' : 'tasks'}
+                </div>
+              </div>
+
+              {sectionEntries.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  No tasks in this time horizon
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {sectionEntries.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="flex items-start gap-3 p-4 bg-background rounded-lg border hover:border-primary/50 transition-colors"
+                    >
+                      <button
+                        onClick={() => handleToggleComplete(entry)}
+                        className="mt-0.5 flex-shrink-0"
+                      >
+                        {entry.completed ? (
+                          <CheckCircle2 className="text-green-500" size={20} />
+                        ) : (
+                          <Circle className="text-muted-foreground hover:text-primary" size={20} />
+                        )}
+                      </button>
+
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium">{entry.title || entry.content.substring(0, 60)}</h3>
+                        {entry.title && entry.content !== entry.title && (
+                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                            {entry.content}
+                          </p>
+                        )}
+
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                          {entry.date && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Clock className="w-3 h-3" />
+                              {entry.date.toLocaleDateString()} {entry.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          )}
+                          {entry.tags && entry.tags.length > 0 && entry.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded text-xs"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                          {entry.type === 'reminder' && (
+                            <span className="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded text-xs">
+                              Reminder
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="mt-8 p-4 bg-muted/50 rounded-lg">
+        <p className="text-sm text-muted-foreground">
+          💡 <strong>Pro tip:</strong> Focus on completing tasks in "Do Now" before moving to later sections.
+          AI automatically categorizes tasks based on due dates - no manual prioritization needed!
+        </p>
+      </div>
+    </div>
+  )
+}

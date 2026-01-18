@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { marked } from 'marked'
 import { db } from '../lib/db'
 import { formatDate, isSameDay, startOfDay, endOfDay, cn } from '../lib/utils'
-import type { Entry, EntryType, Transcription, DiaryEntry } from '../types'
+import type { Entry, EntryType } from '../types'
 
 const entryTypeColors: Partial<Record<EntryType, string>> = {
   journal: 'border-l-blue-500',
@@ -21,58 +21,26 @@ export function CalendarView() {
   const [newNoteTitle, setNewNoteTitle] = useState('')
   const [newNoteContent, setNewNoteContent] = useState('')
 
-  // Get entries for selected date
-  const entries = useLiveQuery(async () => {
+  // Get all entries for selected date from UNIFIED table
+  const allDayEntries = useLiveQuery(async () => {
     const start = startOfDay(selectedDate)
     const end = endOfDay(selectedDate)
     return db.entries
       .where('date')
       .between(start, end, true, true)
-      .filter((entry) => entry.type !== 'diary')
       .toArray()
   }, [selectedDate])
 
-  const transcriptions = useLiveQuery(async () => {
-    const start = startOfDay(selectedDate)
-    const end = endOfDay(selectedDate)
-    return db.transcriptions
-      .where('createdAt')
-      .between(start, end, true, true)
-      .toArray()
-  }, [selectedDate])
+  // Separate entries by type for display
+  const entries = allDayEntries?.filter((e) => e.type !== 'diary' && e.type !== 'voice') || []
+  const voiceEntries = allDayEntries?.filter((e) => e.type === 'voice') || []
+  const diaryEntry = allDayEntries?.find((e) => e.type === 'diary')
 
-  const diaryEntry = useLiveQuery(async () => {
-    const start = startOfDay(selectedDate)
-    const end = endOfDay(selectedDate)
-    return db.diaryEntries
-      .where('date')
-      .between(start, end, true, true)
-      .first()
-  }, [selectedDate])
-
-  // Get all entries for the current month to show indicators
+  // Get all entries for the current month to show indicators (UNIFIED table only)
   const monthEntries = useLiveQuery(async () => {
     const start = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
     const end = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0, 23, 59, 59)
     return db.entries
-      .where('date')
-      .between(start, end, true, true)
-      .toArray()
-  }, [currentMonth])
-
-  const monthTranscriptions = useLiveQuery(async () => {
-    const start = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
-    const end = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0, 23, 59, 59)
-    return db.transcriptions
-      .where('createdAt')
-      .between(start, end, true, true)
-      .toArray()
-  }, [currentMonth])
-
-  const monthDiaryEntries = useLiveQuery(async () => {
-    const start = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
-    const end = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0, 23, 59, 59)
-    return db.diaryEntries
       .where('date')
       .between(start, end, true, true)
       .toArray()
@@ -115,10 +83,7 @@ export function CalendarView() {
   }
 
   const hasEntriesOnDate = (date: Date): boolean => {
-    const entryMatch = monthEntries?.some((entry) => isSameDay(entry.date, date))
-    const transcriptionMatch = monthTranscriptions?.some((item) => isSameDay(item.createdAt, date))
-    const diaryMatch = monthDiaryEntries?.some((entry) => isSameDay(entry.date, date))
-    return Boolean(entryMatch || transcriptionMatch || diaryMatch)
+    return Boolean(monthEntries?.some((entry) => isSameDay(entry.date, date)))
   }
 
   const goToPreviousMonth = () => {
@@ -138,7 +103,7 @@ export function CalendarView() {
   const days = getDaysInMonth(currentMonth)
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-  const renderDiaryHtml = (entry: DiaryEntry) =>
+  const renderDiaryHtml = (entry: Entry) =>
     marked.parse(entry.content || '', { async: false })
 
   const handleAddNote = async () => {
@@ -268,7 +233,7 @@ export function CalendarView() {
             </button>
           </div>
 
-          {!entries?.length && !transcriptions?.length && !diaryEntry ? (
+          {!entries?.length && !voiceEntries?.length && !diaryEntry ? (
             <div className="text-center py-12 bg-muted rounded-lg">
               <p className="text-muted-foreground">No entries for this date</p>
             </div>
@@ -314,21 +279,18 @@ export function CalendarView() {
                             {entry.content}
                           </p>
 
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {entry.priority && (
-                              <span className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded text-xs">
-                                #{entry.priority}
-                              </span>
-                            )}
-                            {entry.tags && entry.tags.length > 0 && entry.tags.map((tag) => (
-                              <span
-                                key={tag}
-                                className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded text-xs"
-                              >
-                                #{tag}
-                              </span>
-                            ))}
-                          </div>
+                          {entry.tags && entry.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {entry.tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded text-xs"
+                                >
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         <button
@@ -344,17 +306,17 @@ export function CalendarView() {
                 </div>
               )}
 
-              {transcriptions && transcriptions.length > 0 && (
+              {voiceEntries && voiceEntries.length > 0 && (
                 <div className="space-y-3">
                   <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    Transcriptions
+                    Voice Notes
                   </h4>
-                  {transcriptions.map((item: Transcription) => (
+                  {voiceEntries.map((item) => (
                     <div
                       key={item.id}
                       className="bg-card border-l-4 border-blue-400 rounded-lg p-4"
                     >
-                      <p className="text-sm text-foreground whitespace-pre-wrap">{item.text}</p>
+                      <p className="text-sm text-foreground whitespace-pre-wrap">{item.content}</p>
                       {item.tags && item.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {item.tags.map((tag) => (
