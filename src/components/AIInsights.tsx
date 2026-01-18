@@ -3,6 +3,7 @@ import { Send, Loader2, Sparkles, CheckCircle2, Mic, MicOff } from 'lucide-react
 import { marked } from 'marked'
 import { cn } from '../lib/utils'
 import { useAIChat } from '../hooks/useAIChat'
+import { AIActionCard } from './AIActionCard'
 
 export function AIInsights() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -15,6 +16,10 @@ export function AIInsights() {
     isListening,
     handleVoiceToggle,
     handleSend,
+    handleAcceptAction,
+    handleRejectAction,
+    handleAcceptAll,
+    handleUpdatePendingAction,
     handleSendMessage,
     handleClearChat,
     messagesEndRef,
@@ -118,17 +123,98 @@ export function AIInsights() {
               ) : (
                 <p className="text-sm whitespace-pre-wrap">{message.content}</p>
               )}
-              {message.actions && message.actions.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-border space-y-1">
-                  {message.actions.map((action, i) => (
-                    <div key={i} className="text-xs text-muted-foreground flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" />
-                      Created {action.type}: {action.title}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
+
+            {/* Pending Actions - Show action cards for user to confirm */}
+            {message.pendingActions && message.pendingActions.length > 0 && (
+              <div className="space-y-2 max-w-[70%]">
+                {message.pendingActions.some(
+                  (action, actionIdx) =>
+                    !message.rejectedActionIndices?.includes(actionIdx) &&
+                    (action.type === 'todo' || action.type === 'reminder') &&
+                    !action.date
+                ) && (
+                  <div className="rounded-lg border border-border bg-background p-3 text-xs text-muted-foreground space-y-2">
+                    <div className="font-medium text-foreground">Set due dates fast</div>
+                    <div className="space-y-2">
+                      {message.pendingActions.map((action, actionIdx) => {
+                        if (
+                          message.rejectedActionIndices?.includes(actionIdx) ||
+                          (action.type !== 'todo' && action.type !== 'reminder') ||
+                          action.date
+                        ) {
+                          return null
+                        }
+
+                        const quickDueOptions = [
+                          {
+                            label: 'In 2 hours',
+                            getDate: () => new Date(Date.now() + 2 * 60 * 60 * 1000),
+                          },
+                          {
+                            label: 'Tomorrow 9am',
+                            getDate: () => {
+                              const date = new Date()
+                              date.setDate(date.getDate() + 1)
+                              date.setHours(9, 0, 0, 0)
+                              return date
+                            },
+                          },
+                          {
+                            label: 'Next week',
+                            getDate: () => {
+                              const date = new Date()
+                              date.setDate(date.getDate() + 7)
+                              date.setHours(9, 0, 0, 0)
+                              return date
+                            },
+                          },
+                        ]
+
+                        return (
+                          <div key={`${action.title}-${actionIdx}`} className="flex flex-wrap items-center gap-2">
+                            <span className="text-foreground">"{action.title}"</span>
+                            {quickDueOptions.map((option) => (
+                              <button
+                                key={option.label}
+                                onClick={() =>
+                                  handleUpdatePendingAction(index, actionIdx, { date: option.getDate() })
+                                }
+                                className="px-2 py-1 rounded bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {message.pendingActions.filter((_, i) => !message.rejectedActionIndices?.includes(i)).length} action(s) to review
+                  </span>
+                  {message.pendingActions.filter((_, i) => !message.rejectedActionIndices?.includes(i)).length > 1 && (
+                    <button
+                      onClick={() => handleAcceptAll(index)}
+                      className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                    >
+                      Accept All
+                    </button>
+                  )}
+                </div>
+                {message.pendingActions.map((action, actionIdx) => (
+                  <AIActionCard
+                    key={actionIdx}
+                    action={action}
+                    onAccept={(editedAction) => handleAcceptAction(index, actionIdx, editedAction)}
+                    onReject={() => handleRejectAction(index, actionIdx)}
+                    isRejected={message.rejectedActionIndices?.includes(actionIdx)}
+                  />
+                ))}
+              </div>
+            )}
             {message.role === 'user' && (
               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
                 <span className="text-sm font-medium">You</span>
