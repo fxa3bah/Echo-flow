@@ -81,19 +81,34 @@ export async function getAIInsights(
    - If date/time is vague ("sometime this week", "later"), set date to undefined
    - ALWAYS return actions in JSON, even if info is incomplete
 
-4. DATES & TIMES:
+4. ⚠️ TIME UNCERTAINTY HANDLING (OR/MAYBE):
+   When user expresses timing uncertainty with "OR", "MAYBE", "EITHER":
+
+   RULE: Set date to the EARLIEST mentioned option, then add "tentative-{alternative}" tag
+
+   Examples:
+   - "today or tomorrow" → date: today 6pm, tags: ["tentative-tomorrow"]
+   - "3pm or 4pm" → date: today 3pm, tags: ["tentative-4pm"]
+   - "Monday or Tuesday" → date: Monday 9am, tags: ["tentative-tuesday"]
+   - "this week or next week" → date: this week, tags: ["tentative-next-week"]
+   - "later today or tomorrow morning" → date: today 6pm, tags: ["tentative-tomorrow-morning"]
+
+   This preserves BOTH time options while showing user the flexibility.
+   The tentative tag will display in the UI so user knows there's an alternative.
+
+5. DATES & TIMES:
    - "by 6pm", "before 6pm", "at 6pm" → set time to 18:00:00
    - "today" → use current date at 09:00:00 (unless specific time given)
    - "sometime this week", "later", "eventually" → set date to undefined (don't ask!)
    - Always use ISO 8601 with user's timezone offset (never "Z")
 
-5. TYPES (choose intelligently):
+6. TYPES (choose intelligently):
    - todo: Work tasks, projects, things to complete
    - reminder: Time-sensitive items with deadlines, emails to send, calls to make
    - note: Information to save, reference material
    - journal: Personal reflections, feelings, experiences
 
-6. PRIORITY (ALWAYS set - REQUIRED field):
+7. PRIORITY (ALWAYS set - REQUIRED field):
    - urgent-important: ANY task with "contract", "client", "deadline", "today", "urgent", "asap", "boss", "meeting"
    - not-urgent-important: Planning, learning, "this week", "next week", "someday"
    - urgent-not-important: Quick interruptions, trivial emails
@@ -101,9 +116,9 @@ export async function getAIInsights(
 
    IMPORTANT: "contract" keyword = ALWAYS urgent-important, even if date is vague
 
-7. TAGS: Auto-generate relevant tags from the content (names, topics, keywords)
+8. TAGS: Auto-generate relevant tags from the content (names, topics, keywords). Include tentative tags when applicable.
 
-8. 📋 FORMATTING SUMMARY RESPONSES:
+9. 📋 FORMATTING SUMMARY RESPONSES:
    When user asks "What are my top priorities?", "How does my day look?", "Summarize what is due today":
    - Format with **markdown** for better readability
    - Use emoji icons: 🎯 urgent-important, 📅 not-urgent-important, ⚡ urgent-not-important
@@ -207,6 +222,22 @@ AI: "I'll set up those tasks for you - working on the Southern Tide Contract and
       "tags": ["email", "Tyler"]
     }
   ]
+}
+---END---
+
+User: "Discuss with Brooks later today or tomorrow morning"
+AI: "Got it! I'll set up a reminder to discuss with Brooks later today, with tomorrow morning as a backup option.
+
+---JSON---
+{
+  "actions": [{
+    "type": "reminder",
+    "title": "Discuss with Brooks",
+    "content": "Discuss with Brooks later today or tomorrow morning",
+    "date": "2026-01-18T18:00:00+03:00",
+    "priority": "not-urgent-important",
+    "tags": ["discussion", "Brooks", "tentative-tomorrow-morning"]
+  }]
 }
 ---END---
 
