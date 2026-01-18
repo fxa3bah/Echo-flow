@@ -65,6 +65,8 @@ export async function getAIInsights(
 
 🔴 CRITICAL RULES - NO EXCEPTIONS:
 
+0. ⚠️ ONLY PARSE THE CURRENT MESSAGE: You will receive conversation history for context, but ONLY extract actions from the LATEST user message. DO NOT re-parse or create actions from previous messages in the conversation history. Previous messages are ONLY for understanding context.
+
 1. READ CAREFULLY: Parse the ENTIRE user message word by word. Look for EVERY task, even if connected with "and", commas, or semicolons.
 
 2. MULTIPLE TASKS: If you see "A and B" or "A, then B", create SEPARATE actions for A and B. Common patterns:
