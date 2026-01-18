@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, CheckSquare, Square, Eye, Edit3, ChevronDown
 import { marked } from 'marked'
 import { db } from '../lib/db'
 import { formatDate, isSameDay, cn } from '../lib/utils'
-import type { DiaryEntry } from '../types'
+import type { Entry } from '../types'
 import { SlashCommandMenu, type SlashCommand } from './SlashCommandMenu'
 
 // Helper function to strip HTML tags and convert to plain text
@@ -34,28 +34,20 @@ export function DiaryEditor() {
   const [slashPosition, setSlashPosition] = useState({ top: 0, left: 0 })
   const [slashStartPos, setSlashStartPos] = useState(0)
 
-  // Get diary entry for selected date
-  const diaryEntry = useLiveQuery(async () => {
-    const entries = await db.diaryEntries.toArray()
-    return entries.find((entry) => isSameDay(entry.date, selectedDate))
-  }, [selectedDate])
-
-  // Get transcriptions for selected date
-  const dayTranscriptions = useLiveQuery(async () => {
-    const all = await db.transcriptions.toArray()
-    return all.filter((t) => isSameDay(t.createdAt, selectedDate))
-  }, [selectedDate])
-
-  // Get entries (todos/reminders) for selected date
-  const dayEntries = useLiveQuery(async () => {
+  // Get all entries for selected date from UNIFIED table
+  const allDayData = useLiveQuery(async () => {
     const all = await db.entries.toArray()
-    return all.filter(
-      (e) =>
-        isSameDay(e.date, selectedDate) &&
-        (e.type === 'todo' || e.type === 'reminder') &&
-        !e.content.trim().startsWith('### AI Actions')
-    )
+    return all.filter((e) => isSameDay(e.date, selectedDate))
   }, [selectedDate])
+
+  // Separate by type
+  const diaryEntry = allDayData?.find((e) => e.type === 'diary')
+  const dayTranscriptions = allDayData?.filter((e) => e.type === 'voice') || []
+  const dayEntries = allDayData?.filter(
+    (e) =>
+      (e.type === 'todo' || e.type === 'reminder') &&
+      !e.content.trim().startsWith('### AI Actions')
+  ) || []
 
   useEffect(() => {
     const cleanupLegacyEntries = async () => {
@@ -83,7 +75,7 @@ export function DiaryEditor() {
       setContent(cleanedContent)
 
       if (cleanedContent !== diaryEntry.content) {
-        db.diaryEntries.update(diaryEntry.id, {
+        db.entries.update(diaryEntry.id, {
           content: cleanedContent,
           updatedAt: new Date(),
         }).catch(console.error)
@@ -114,7 +106,7 @@ export function DiaryEditor() {
     if (!newContent || newContent.trim() === '') {
       // If content is empty and entry exists, delete it
       if (diaryEntry) {
-        await db.diaryEntries.delete(diaryEntry.id)
+        await db.entries.delete(diaryEntry.id)
       }
       return
     }
@@ -122,19 +114,23 @@ export function DiaryEditor() {
     setIsSaving(true)
     try {
       if (diaryEntry) {
-        await db.diaryEntries.update(diaryEntry.id, {
+        await db.entries.update(diaryEntry.id, {
           content: newContent,
           updatedAt: new Date(),
         })
       } else {
-        const newEntry: DiaryEntry = {
+        const newEntry: Entry = {
           id: crypto.randomUUID(),
+          type: 'diary',
+          source: 'diary',
           date: selectedDate,
           content: newContent,
           createdAt: new Date(),
           updatedAt: new Date(),
+          tags: [],
+          linkedEntryIds: [],
         }
-        await db.diaryEntries.add(newEntry)
+        await db.entries.add(newEntry)
       }
       setLastSaved(new Date())
     } catch (error) {
