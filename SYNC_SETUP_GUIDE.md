@@ -1,8 +1,23 @@
 # Echo Flow - Easy Sync Setup Guide
 
-## Problem: Syncing Between Phone and Windows Laptop
+## 🎉 NEW: Direct Cloud API Integration Available!
 
-Echo Flow already has cloud sync built-in! However, there's an **important limitation on mobile devices**.
+**The mobile sync problem is now SOLVED!** Echo Flow now supports direct Google Drive and OneDrive API integration.
+
+✅ **What this means for you:**
+- Works on **all devices** including mobile browsers
+- No folder picker needed
+- Simple "Sign in with Google/Microsoft" button
+- Automatic sync every 5 minutes
+- **See [CLOUD_SYNC_SETUP.md](CLOUD_SYNC_SETUP.md) for setup instructions**
+
+The information below describes the older manual method and file picker approach, which still work but are no longer necessary if you use the API integration.
+
+---
+
+## Problem: Syncing Between Phone and Windows Laptop (Old Method)
+
+Echo Flow has cloud sync built-in! However, there's an **important limitation on mobile devices** with the file picker method.
 
 ---
 

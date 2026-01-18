@@ -2,10 +2,23 @@
 
 A fast, intuitive voice-first productivity web application that combines quick voice-to-text journaling, task management, and calendar organization with AI-powered insights.
 
-![Echo Flow](https://img.shields.io/badge/version-2.0.0-blue)
+![Echo Flow](https://img.shields.io/badge/version-2.1.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-## 🎉 What's New in v2.0 (Sprint 1)
+## 🎉 What's New in v2.1
+
+### ☁️ Direct Cloud API Integration
+- **Google Drive API**: Direct API integration with OAuth 2.0
+- **OneDrive API**: Microsoft Graph API integration
+- **Mobile-Friendly**: Works on all devices including mobile browsers
+- **No Folder Picker**: Simple "Sign in" button - no folder selection needed
+- **Auto-Sync**: Automatic sync every 5 minutes
+- **Solves Mobile Limitation**: File picker restriction is now bypassed
+- Setup guide: [CLOUD_SYNC_SETUP.md](CLOUD_SYNC_SETUP.md)
+
+---
+
+## What's New in v2.0 (Sprint 1)
 
 ### ✅ Navigation & Mobile UX
 - **Sticky Navigation**: Header stays visible while scrolling on mobile and desktop
@@ -85,7 +98,13 @@ A fast, intuitive voice-first productivity web application that combines quick v
 - **Actionable**: Mark items as complete directly in matrix
 
 ### 💾 Smart Data Management
-- **Cloud Sync**: Auto-sync every 5 minutes to OneDrive/Google Drive/Dropbox
+- **🆕 Cloud API Sync**: Direct Google Drive & OneDrive integration
+  - ✅ Works on mobile browsers (solves file picker limitation!)
+  - ✅ Simple "Sign in with Google/Microsoft" button
+  - ✅ Auto-sync every 5 minutes
+  - ✅ No folder selection needed
+  - See [CLOUD_SYNC_SETUP.md](CLOUD_SYNC_SETUP.md) for setup instructions
+- **Local Folder Sync**: Auto-sync to local folder (desktop only)
 - **File System Access API**: Choose your sync folder, works offline
 - **Manual Controls**: "Save Now" and "Load Now" buttons
 - **Data Export**: Export all data to JSON with timestamps

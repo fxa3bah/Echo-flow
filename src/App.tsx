@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useThemeStore } from './stores/themeStore'
 import { VoiceRecorder } from './components/VoiceRecorder'
 import { Navigation } from './components/Navigation'
@@ -10,6 +10,8 @@ import { AIInsights } from './components/AIInsights'
 import { SettingsModal } from './components/SettingsModal'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useReminderNotifications } from './hooks/useReminderNotifications'
+import { handleGoogleOAuthCallback, startGoogleDriveAutoSync } from './services/googleDriveSync'
+import { handleMicrosoftOAuthCallback, startOneDriveAutoSync } from './services/oneDriveSync'
 import { cn } from './lib/utils'
 
 type View = 'home' | 'aiinsights' | 'entries' | 'calendar' | 'focus' | 'diary'
@@ -18,6 +20,44 @@ function App() {
   const [currentView, setCurrentView] = useState<View>('home')
   const [showSettings, setShowSettings] = useState(false)
   const { theme } = useThemeStore()
+
+  // Handle OAuth callbacks on mount
+  useEffect(() => {
+    const handleOAuthCallback = async () => {
+      // Check if we have OAuth redirect
+      const hash = window.location.hash
+      if (hash && hash.includes('access_token')) {
+        // Try Google Drive callback
+        const googleResult = await handleGoogleOAuthCallback()
+        if (googleResult.success) {
+          console.log('Google Drive authentication successful')
+          // Start auto-sync
+          startGoogleDriveAutoSync(5)
+          // Open settings to show success
+          setShowSettings(true)
+          return
+        }
+
+        // Try OneDrive callback
+        const oneDriveResult = await handleMicrosoftOAuthCallback()
+        if (oneDriveResult.success) {
+          console.log('OneDrive authentication successful')
+          // Start auto-sync
+          startOneDriveAutoSync(5)
+          // Open settings to show success
+          setShowSettings(true)
+          return
+        }
+
+        // If neither worked, show error
+        if (googleResult.error || oneDriveResult.error) {
+          console.error('OAuth callback error:', googleResult.error || oneDriveResult.error)
+        }
+      }
+    }
+
+    handleOAuthCallback()
+  }, [])
 
   // Keyboard shortcuts
   useKeyboardShortcuts([
