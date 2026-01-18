@@ -279,21 +279,18 @@ export function CalendarView() {
                             {entry.content}
                           </p>
 
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {entry.priority && (
-                              <span className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded text-xs">
-                                #{entry.priority}
-                              </span>
-                            )}
-                            {entry.tags && entry.tags.length > 0 && entry.tags.map((tag) => (
-                              <span
-                                key={tag}
-                                className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded text-xs"
-                              >
-                                #{tag}
-                              </span>
-                            ))}
-                          </div>
+                          {entry.tags && entry.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {entry.tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded text-xs"
+                                >
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         <button
