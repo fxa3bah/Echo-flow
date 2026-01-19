@@ -61,7 +61,6 @@ export async function appendToDiaryEntry(date: Date, text: string): Promise<bool
     type: 'diary',
     source: 'diary',
     content: trimmed,
-    title: `Daily Notes - ${date.toLocaleDateString()}`,
     date,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -99,7 +98,7 @@ export async function applyAIActions(actions: AIAction[], fallbackDate = new Dat
     const key = date.toDateString()
     const existing = actionSummariesByDate.get(key) ?? { date, lines: [] }
     const dueText = action.date ? ` (due ${action.date.toLocaleString()})` : ''
-    existing.lines.push(`- [${action.type}] ${action.title}${dueText}`)
+    existing.lines.push(`[${action.type}] ${action.title}${dueText}`)
     actionSummariesByDate.set(key, existing)
   }
 
@@ -153,15 +152,14 @@ export async function applyAIActions(actions: AIAction[], fallbackDate = new Dat
     }
 
     if (action.type === 'journal' || action.type === 'note') {
-      const diaryText = `### ${normalizedTitle}\n${normalizedContent}`
-      const appended = await appendToDiaryEntry(actionDate, diaryText)
+      const appended = await appendToDiaryEntry(actionDate, normalizedContent)
       diaryUpdated = diaryUpdated || appended
     }
   }
 
   for (const { date, lines } of actionSummariesByDate.values()) {
     if (lines.length > 0) {
-      const summary = ['### AI Actions', ...lines].join('\n')
+      const summary = lines.map((line) => `- ${line}`).join('\n')
       const appended = await appendToDiaryEntry(date, summary)
       diaryUpdated = diaryUpdated || appended
     }

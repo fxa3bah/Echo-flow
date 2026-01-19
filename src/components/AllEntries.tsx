@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Trash2, Calendar as CalendarIcon, Tag as TagIcon, CheckSquare, Square, Edit3, X } from 'lucide-react'
+import { Trash2, Calendar as CalendarIcon, Tag as TagIcon, CheckSquare, Square, SquarePen, SlidersHorizontal, X } from 'lucide-react'
 import { db } from '../lib/db'
 import { cn, ensureDate, ensureString } from '../lib/utils'
 import type { Entry } from '../types'
@@ -14,6 +14,14 @@ export function AllEntries() {
   const [searchQuery, setSearchQuery] = useState('')
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null)
   const [editedTags, setEditedTags] = useState('')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDate, setBulkDate] = useState('')
+  const [inlineEditingId, setInlineEditingId] = useState<string | null>(null)
+  const [inlineEditDraft, setInlineEditDraft] = useState({
+    title: '',
+    content: '',
+    date: '',
+  })
 
   const stripAiActionLines = (text: string) =>
     ensureString(text)
@@ -52,6 +60,16 @@ export function AllEntries() {
           return { ...entry, content }
         })
       setEntries(cleanedEntries)
+      setSelectedIds((prev) => {
+        const next = new Set<string>()
+        const validIds = new Set(cleanedEntries.map((entry) => entry.id))
+        prev.forEach((id) => {
+          if (validIds.has(id)) {
+            next.add(id)
+          }
+        })
+        return next
+      })
     } catch (error) {
       console.error('Failed to load data:', error)
     }
@@ -107,6 +125,74 @@ export function AllEntries() {
     }
   }
 
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      const filteredIds = sortedEntries.map((entry) => entry.id)
+      const allSelected = filteredIds.length > 0 && filteredIds.every((id) => next.has(id))
+      if (allSelected) {
+        filteredIds.forEach((id) => next.delete(id))
+      } else {
+        filteredIds.forEach((id) => next.add(id))
+      }
+      return next
+    })
+  }
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const clearSelection = () => {
+    setSelectedIds(new Set())
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    if (!confirm(`Delete ${selectedIds.size} selected entries?`)) return
+
+    try {
+      await db.transaction('rw', db.entries, async () => {
+        for (const id of selectedIds) {
+          await db.entries.delete(id)
+        }
+      })
+      setSelectedIds(new Set())
+      await loadAllData()
+    } catch (error) {
+      console.error('Failed to delete selected entries:', error)
+    }
+  }
+
+  const handleBulkDateUpdate = async () => {
+    if (selectedIds.size === 0 || !bulkDate) return
+    const nextDate = new Date(bulkDate)
+    if (Number.isNaN(nextDate.getTime())) return
+
+    try {
+      await db.transaction('rw', db.entries, async () => {
+        for (const id of selectedIds) {
+          await db.entries.update(id, {
+            date: nextDate,
+            updatedAt: new Date(),
+          })
+        }
+      })
+      setBulkDate('')
+      await loadAllData()
+    } catch (error) {
+      console.error('Failed to update dates:', error)
+    }
+  }
+
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this entry?')) return
 
@@ -159,6 +245,36 @@ export function AllEntries() {
       closeEdit()
     } catch (error) {
       console.error('Failed to update:', error)
+    }
+  }
+
+  const startInlineEdit = (entry: Entry) => {
+    setInlineEditingId(entry.id)
+    setInlineEditDraft({
+      title: entry.title || '',
+      content: ensureString(entry.content),
+      date: formatDateTimeLocal(ensureDate(entry.date)),
+    })
+  }
+
+  const cancelInlineEdit = () => {
+    setInlineEditingId(null)
+    setInlineEditDraft({ title: '', content: '', date: '' })
+  }
+
+  const handleInlineSave = async (entryId: string) => {
+    const nextDate = inlineEditDraft.date ? new Date(inlineEditDraft.date) : new Date()
+    try {
+      await db.entries.update(entryId, {
+        title: inlineEditDraft.title.trim() || undefined,
+        content: inlineEditDraft.content.trim(),
+        date: nextDate,
+        updatedAt: new Date(),
+      })
+      cancelInlineEdit()
+      await loadAllData()
+    } catch (error) {
+      console.error('Failed to update entry:', error)
     }
   }
 
@@ -223,11 +339,54 @@ export function AllEntries() {
         />
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3">
+          <span className="text-sm font-medium">
+            {selectedIds.size} selected
+          </span>
+          <button
+            onClick={handleBulkDelete}
+            className="px-3 py-1.5 text-sm bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+          >
+            Delete selected
+          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-sm text-muted-foreground">Set date/time</label>
+            <input
+              type="datetime-local"
+              value={bulkDate}
+              onChange={(e) => setBulkDate(e.target.value)}
+              className="px-2 py-1.5 text-sm border border-border rounded bg-background"
+            />
+            <button
+              onClick={handleBulkDateUpdate}
+              className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+            >
+              Update dates
+            </button>
+          </div>
+          <button
+            onClick={clearSelection}
+            className="ml-auto px-3 py-1.5 text-sm bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+          >
+            Clear selection
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="border border-border rounded-lg overflow-hidden">
         <table className="w-full table-auto">
           <thead className="bg-muted/50 border-b border-border">
             <tr>
+              <th className="text-left p-3 font-medium whitespace-nowrap">
+                <input
+                  type="checkbox"
+                  checked={sortedEntries.length > 0 && sortedEntries.every((entry) => selectedIds.has(entry.id))}
+                  onChange={toggleSelectAll}
+                  aria-label="Select all filtered entries"
+                />
+              </th>
               <th className="text-left p-3 font-medium whitespace-nowrap">
                 <button
                   onClick={() => handleSort('date')}
@@ -271,31 +430,50 @@ export function AllEntries() {
           <tbody className="divide-y divide-border">
             {sortedEntries.length === 0 ? (
               <tr>
-                <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                <td colSpan={7} className="p-8 text-center text-muted-foreground">
                   {searchQuery ? 'No entries match your search' : 'No entries yet. Start recording or add notes!'}
                 </td>
               </tr>
             ) : (
               sortedEntries.map((entry) => (
                 <tr key={entry.id} className="hover:bg-muted/30 transition-colors">
+                  <td className="p-3 align-top">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(entry.id)}
+                      onChange={() => toggleSelectOne(entry.id)}
+                      aria-label={`Select entry ${entry.id}`}
+                    />
+                  </td>
                   {/* Date */}
                   <td className="p-3 text-sm whitespace-nowrap align-top">
                     <div className="flex items-center gap-2">
                       <CalendarIcon className="w-4 h-4 text-muted-foreground" />
                       <div>
-                        {(() => {
-                          const entryDate = ensureDate(entry.date)
-                          return entryDate ? (
-                            <>
-                              <div>{entryDate.toLocaleDateString()}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {entryDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </div>
-                            </>
-                          ) : (
-                            <div className="text-xs text-muted-foreground">No date</div>
-                          )
-                        })()}
+                        {inlineEditingId === entry.id ? (
+                          <input
+                            type="datetime-local"
+                            value={inlineEditDraft.date}
+                            onChange={(e) =>
+                              setInlineEditDraft((prev) => ({ ...prev, date: e.target.value }))
+                            }
+                            className="px-2 py-1 text-xs border border-border rounded bg-background"
+                          />
+                        ) : (
+                          (() => {
+                            const entryDate = ensureDate(entry.date)
+                            return entryDate ? (
+                              <>
+                                <div>{entryDate.toLocaleDateString()}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {entryDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="text-xs text-muted-foreground">No date</div>
+                            )
+                          })()
+                        )}
                       </div>
                     </div>
                   </td>
@@ -316,17 +494,42 @@ export function AllEntries() {
                         </button>
                       )}
                       <div className="flex-1 min-w-0">
-                        {entry.title && (
-                          <div className="font-medium text-sm mb-1">{entry.title}</div>
+                        {inlineEditingId === entry.id ? (
+                          <div className="space-y-2">
+                            <input
+                              type="text"
+                              value={inlineEditDraft.title}
+                              onChange={(e) =>
+                                setInlineEditDraft((prev) => ({ ...prev, title: e.target.value }))
+                              }
+                              placeholder="Title (optional)"
+                              className="w-full px-2 py-1 text-sm border border-border rounded bg-background"
+                            />
+                            <textarea
+                              value={inlineEditDraft.content}
+                              onChange={(e) =>
+                                setInlineEditDraft((prev) => ({ ...prev, content: e.target.value }))
+                              }
+                              className="w-full px-2 py-1 text-sm border border-border rounded bg-background resize-none"
+                              rows={2}
+                            />
+                          </div>
+                        ) : (
+                          <>
+                            {entry.title && (
+                              <div className="font-medium text-sm mb-1">{entry.title}</div>
+                            )}
+                            <p
+                              className={cn(
+                                'text-sm line-clamp-2',
+                                entry.completed && 'line-through text-muted-foreground'
+                              )}
+                              onDoubleClick={() => startInlineEdit(entry)}
+                            >
+                              {ensureString(entry.content)}
+                            </p>
+                          </>
                         )}
-                        <p
-                          className={cn(
-                            'text-sm line-clamp-2',
-                            entry.completed && 'line-through text-muted-foreground'
-                          )}
-                        >
-                          {ensureString(entry.content)}
-                        </p>
                       </div>
                     </div>
                   </td>
@@ -364,20 +567,46 @@ export function AllEntries() {
 
                   {/* Actions */}
                   <td className="p-3 text-right whitespace-nowrap align-top">
-                    <button
-                      onClick={() => openEdit(entry)}
-                      className="p-2 hover:bg-muted/70 text-muted-foreground hover:text-foreground rounded transition-colors"
-                      title="Edit"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(entry.id)}
-                      className="p-2 hover:bg-destructive/10 hover:text-destructive rounded transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {inlineEditingId === entry.id ? (
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleInlineSave(entry.id)}
+                          className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={cancelInlineEdit}
+                          className="px-3 py-1.5 text-xs bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => startInlineEdit(entry)}
+                          className="p-2 hover:bg-muted/70 text-muted-foreground hover:text-foreground rounded transition-colors"
+                          title="Inline edit"
+                        >
+                          <SquarePen className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => openEdit(entry)}
+                          className="p-2 hover:bg-muted/70 text-muted-foreground hover:text-foreground rounded transition-colors"
+                          title="Edit details"
+                        >
+                          <SlidersHorizontal className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(entry.id)}
+                          className="p-2 hover:bg-destructive/10 hover:text-destructive rounded transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))

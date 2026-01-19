@@ -27,6 +27,50 @@ export async function exportAllData(): Promise<string> {
   return JSON.stringify(exportData, null, 2)
 }
 
+export async function getLocalLatestUpdateTime(): Promise<string | null> {
+  const [transcriptions, entries, diaryEntries] = await Promise.all([
+    db.transcriptions.toArray(),
+    db.entries.toArray(),
+    db.diaryEntries.toArray(),
+  ])
+
+  let latestTimestamp = 0
+  const localChangeTimestamp = localStorage.getItem('local_lastChangeTime')
+  if (localChangeTimestamp) {
+    const parsedLocalChange = new Date(localChangeTimestamp).getTime()
+    if (!Number.isNaN(parsedLocalChange)) {
+      latestTimestamp = parsedLocalChange
+    }
+  }
+
+  const considerDate = (value?: Date | string) => {
+    if (!value) return
+    const date = value instanceof Date ? value : new Date(value)
+    const time = date.getTime()
+    if (!Number.isNaN(time)) {
+      latestTimestamp = Math.max(latestTimestamp, time)
+    }
+  }
+
+  transcriptions.forEach((item) => {
+    considerDate(item.updatedAt || item.createdAt)
+  })
+
+  entries.forEach((item) => {
+    considerDate(item.updatedAt || item.createdAt || item.date)
+  })
+
+  diaryEntries.forEach((item) => {
+    considerDate(item.updatedAt || item.createdAt || item.date)
+  })
+
+  if (!latestTimestamp) {
+    return null
+  }
+
+  return new Date(latestTimestamp).toISOString()
+}
+
 // Import data from JSON
 export async function importData(jsonData: string): Promise<{ success: boolean; error?: string; imported: { transcriptions: number; entries: number; diaryEntries: number } }> {
   try {
