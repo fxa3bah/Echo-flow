@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Plus } from 'lucide-re
 import { useState } from 'react'
 import { marked } from 'marked'
 import { db } from '../lib/db'
-import { formatDate, isSameDay, startOfDay, endOfDay, cn } from '../lib/utils'
+import { formatDate, isSameDay, startOfDay, endOfDay, cn, ensureDate, ensureString } from '../lib/utils'
 import type { Entry, EntryType } from '../types'
 
 const entryTypeColors: Partial<Record<EntryType, string>> = {
@@ -83,7 +83,12 @@ export function CalendarView() {
   }
 
   const hasEntriesOnDate = (date: Date): boolean => {
-    return Boolean(monthEntries?.some((entry) => isSameDay(entry.date, date)))
+    return Boolean(
+      monthEntries?.some((entry) => {
+        const entryDate = ensureDate(entry.date)
+        return entryDate ? isSameDay(entryDate, date) : false
+      })
+    )
   }
 
   const goToPreviousMonth = () => {
@@ -104,7 +109,7 @@ export function CalendarView() {
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
   const renderDiaryHtml = (entry: Entry) =>
-    marked.parse(entry.content || '', { async: false })
+    marked.parse(ensureString(entry.content), { async: false })
 
   const handleAddNote = async () => {
     const content = newNoteContent.trim()
@@ -276,7 +281,7 @@ export function CalendarView() {
                             {entry.title}
                           </h4>
                           <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                            {entry.content}
+                            {ensureString(entry.content)}
                           </p>
 
                           {entry.tags && entry.tags.length > 0 && (
