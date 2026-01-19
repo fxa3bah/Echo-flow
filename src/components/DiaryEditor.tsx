@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, CheckSquare, Square, Eye, Edit3, ChevronDown, ChevronUp } from 'lucide-react'
 import { marked } from 'marked'
 import { db } from '../lib/db'
-import { formatDate, isSameDay, cn } from '../lib/utils'
+import { formatDate, isSameDay, cn, ensureDate, ensureString } from '../lib/utils'
 import type { Entry } from '../types'
 import { SlashCommandMenu, type SlashCommand } from './SlashCommandMenu'
 
@@ -37,17 +37,20 @@ export function DiaryEditor() {
   // Get all entries for selected date from UNIFIED table
   const allDayData = useLiveQuery(async () => {
     const all = await db.entries.toArray()
-    return all.filter((e) => isSameDay(e.date, selectedDate))
+    return all.filter((e) => {
+      const entryDate = ensureDate(e.date)
+      return entryDate ? isSameDay(entryDate, selectedDate) : false
+    })
   }, [selectedDate])
 
   // Separate by type
   const diaryEntry = allDayData?.find((e) => e.type === 'diary')
   const dayTranscriptions = allDayData?.filter((e) => e.type === 'voice') || []
-  const dayEntries = allDayData?.filter(
-    (e) =>
-      (e.type === 'todo' || e.type === 'reminder') &&
-      !e.content.trim().startsWith('### AI Actions')
-  ) || []
+  const dayEntries = allDayData?.filter((e) => {
+    const content = ensureString(e.content)
+    return (e.type === 'todo' || e.type === 'reminder') &&
+      !content.trim().startsWith('### AI Actions')
+  }) || []
 
   useEffect(() => {
     const cleanupLegacyEntries = async () => {
@@ -56,7 +59,7 @@ export function DiaryEditor() {
       await db.entries
         .where('date')
         .between(start, end, true, true)
-        .filter((entry) => entry.content.trim().startsWith('### AI Actions'))
+        .filter((entry) => ensureString(entry.content).trim().startsWith('### AI Actions'))
         .delete()
     }
     cleanupLegacyEntries().catch(console.error)
@@ -65,8 +68,9 @@ export function DiaryEditor() {
   useEffect(() => {
     if (diaryEntry) {
       // Check if content contains HTML tags (from old rich text editor)
-      const hasHtmlTags = /<[^>]+>/.test(diaryEntry.content)
-      const rawContent = hasHtmlTags ? stripHtml(diaryEntry.content) : diaryEntry.content
+      const safeContent = ensureString(diaryEntry.content)
+      const hasHtmlTags = /<[^>]+>/.test(safeContent)
+      const rawContent = hasHtmlTags ? stripHtml(safeContent) : safeContent
       const cleanedContent = rawContent
         .split('\n')
         .filter((line) => !line.trim().startsWith('### AI Actions'))
@@ -74,7 +78,7 @@ export function DiaryEditor() {
 
       setContent(cleanedContent)
 
-      if (cleanedContent !== diaryEntry.content) {
+      if (cleanedContent !== safeContent) {
         db.entries.update(diaryEntry.id, {
           content: cleanedContent,
           updatedAt: new Date(),
@@ -391,7 +395,7 @@ export function DiaryEditor() {
                       <Square className="w-5 h-5 text-muted-foreground" />
                     </button>
                     <div className="flex-1">
-                      <p className="text-sm font-medium">{entry.content}</p>
+                      <p className="text-sm font-medium">{ensureString(entry.content)}</p>
                       {entry.tags && entry.tags.length > 0 && (
                         <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
                           {entry.tags.map((tag) => (
@@ -424,7 +428,7 @@ export function DiaryEditor() {
                       <CheckSquare className="w-5 h-5 text-green-600" />
                     </button>
                     <div className="flex-1">
-                      <p className="text-sm line-through text-muted-foreground">{entry.content}</p>
+                      <p className="text-sm line-through text-muted-foreground">{ensureString(entry.content)}</p>
                       {entry.tags && entry.tags.length > 0 && (
                         <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
                           {entry.tags.map((tag) => (
