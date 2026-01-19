@@ -127,6 +127,16 @@ const triggerSupabaseSync = () => {
     })
 }
 
+const LOCAL_CHANGE_TIME_KEY = 'local_lastChangeTime'
+
+const markLocalChange = () => {
+  try {
+    localStorage.setItem(LOCAL_CHANGE_TIME_KEY, new Date().toISOString())
+  } catch (error) {
+    console.debug('Failed to store local change time:', error)
+  }
+}
+
 const registerChangeHooks = () => {
   const tables: Array<keyof EchoFlowDatabase> = [
     'entries',
@@ -141,12 +151,15 @@ const registerChangeHooks = () => {
     if (!table?.hook) return
 
     table.hook('creating', () => {
+      markLocalChange()
       triggerSupabaseSync()
     })
     table.hook('updating', () => {
+      markLocalChange()
       triggerSupabaseSync()
     })
     table.hook('deleting', () => {
+      markLocalChange()
       triggerSupabaseSync()
     })
   })
@@ -173,6 +186,7 @@ const changesEvent = (db as any)._events?.changes
 if (changesEvent?.subscribe) {
   ;(db as any).on('changes', (changes: any) => {
     console.log('IndexedDB changes detected:', changes.length, 'changes')
+    markLocalChange()
     triggerSupabaseSync()
   })
 } else {

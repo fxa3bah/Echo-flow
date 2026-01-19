@@ -41,7 +41,7 @@
  */
 
 import { createClient, SupabaseClient, User, Session } from '@supabase/supabase-js'
-import { exportAllData, importData } from './dataSync'
+import { exportAllData, importData, getLocalLatestUpdateTime } from './dataSync'
 
 // CONFIGURATION: Update with your Supabase credentials
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
@@ -300,6 +300,8 @@ export async function uploadToSupabase(): Promise<{ success: boolean; error?: st
         user_id: user.id,
         data: data,
         updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id',
       })
 
     if (error) {
@@ -351,6 +353,7 @@ export async function downloadFromSupabase(): Promise<{
     if (error) {
       // If no data exists yet, that's okay (first time user)
       if (error.code === 'PGRST116') {
+        localStorage.setItem('supabase_lastSyncTime', new Date().toISOString())
         return {
           success: true,
           imported: { transcriptions: 0, entries: 0, diaryEntries: 0 },
@@ -364,6 +367,7 @@ export async function downloadFromSupabase(): Promise<{
     }
 
     if (!data || !data.data) {
+      localStorage.setItem('supabase_lastSyncTime', new Date().toISOString())
       return {
         success: true,
         imported: { transcriptions: 0, entries: 0, diaryEntries: 0 },
@@ -393,6 +397,153 @@ export async function downloadFromSupabase(): Promise<{
  */
 export function getSupabaseLastSyncTime(): string | null {
   return localStorage.getItem('supabase_lastSyncTime')
+}
+
+async function getSupabaseServerUpdatedAt(): Promise<string | null> {
+  const user = await getCurrentUser()
+  if (!user) {
+    return null
+  }
+
+  const client = getSupabaseClient()
+  const { data, error } = await client
+    .from('user_data')
+    .select('updated_at')
+    .eq('user_id', user.id)
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return null
+    }
+    throw error
+  }
+
+  return data?.updated_at || null
+}
+
+export type SupabaseSyncAction = 'upload' | 'download' | 'noop'
+
+export async function syncSupabaseMostRecent(): Promise<{
+  success: boolean
+  action: SupabaseSyncAction
+  error?: string
+  imported?: { transcriptions: number; entries: number; diaryEntries: number }
+}> {
+  try {
+    const [localTimestamp, serverTimestamp] = await Promise.all([
+      getLocalLatestUpdateTime(),
+      getSupabaseServerUpdatedAt(),
+    ])
+
+    if (!localTimestamp && !serverTimestamp) {
+      localStorage.setItem('supabase_lastSyncTime', new Date().toISOString())
+      return { success: true, action: 'noop' }
+    }
+
+    if (!serverTimestamp && localTimestamp) {
+      const uploadResult = await uploadToSupabase()
+      return {
+        success: uploadResult.success,
+        action: uploadResult.success ? 'upload' : 'noop',
+        error: uploadResult.error,
+      }
+    }
+
+    if (serverTimestamp && !localTimestamp) {
+      const downloadResult = await downloadFromSupabase()
+      return {
+        ...downloadResult,
+        action: downloadResult.success ? 'download' : 'noop',
+      }
+    }
+
+    const localTime = new Date(localTimestamp as string).getTime()
+    const serverTime = new Date(serverTimestamp as string).getTime()
+
+    if (localTime >= serverTime) {
+      const uploadResult = await uploadToSupabase()
+      return {
+        success: uploadResult.success,
+        action: uploadResult.success ? 'upload' : 'noop',
+        error: uploadResult.error,
+      }
+    }
+
+    const downloadResult = await downloadFromSupabase()
+    return {
+      ...downloadResult,
+      action: downloadResult.success ? 'download' : 'noop',
+    }
+  } catch (error: any) {
+    console.error('Most recent sync error:', error)
+    return {
+      success: false,
+      action: 'noop',
+      error: error.message || 'Failed to sync most recent data',
+    }
+  }
+}
+
+export async function pullSupabaseMostRecent(): Promise<{
+  success: boolean
+  action: SupabaseSyncAction
+  error?: string
+  imported?: { transcriptions: number; entries: number; diaryEntries: number }
+}> {
+  try {
+    const [localTimestamp, serverTimestamp] = await Promise.all([
+      getLocalLatestUpdateTime(),
+      getSupabaseServerUpdatedAt(),
+    ])
+
+    if (!serverTimestamp && !localTimestamp) {
+      localStorage.setItem('supabase_lastSyncTime', new Date().toISOString())
+      return { success: true, action: 'noop' }
+    }
+
+    if (!serverTimestamp && localTimestamp) {
+      const uploadResult = await uploadToSupabase()
+      return {
+        success: uploadResult.success,
+        action: uploadResult.success ? 'upload' : 'noop',
+        error: uploadResult.error,
+      }
+    }
+
+    if (serverTimestamp && !localTimestamp) {
+      const downloadResult = await downloadFromSupabase()
+      return {
+        ...downloadResult,
+        action: downloadResult.success ? 'download' : 'noop',
+      }
+    }
+
+    const localTime = new Date(localTimestamp as string).getTime()
+    const serverTime = new Date(serverTimestamp as string).getTime()
+
+    if (serverTime >= localTime) {
+      const downloadResult = await downloadFromSupabase()
+      return {
+        ...downloadResult,
+        action: downloadResult.success ? 'download' : 'noop',
+      }
+    }
+
+    const uploadResult = await uploadToSupabase()
+    return {
+      success: uploadResult.success,
+      action: uploadResult.success ? 'upload' : 'noop',
+      error: uploadResult.error,
+    }
+  } catch (error: any) {
+    console.error('Pull latest error:', error)
+    return {
+      success: false,
+      action: 'noop',
+      error: error.message || 'Failed to pull latest data',
+    }
+  }
 }
 
 /**
@@ -522,7 +673,7 @@ export function stopRealtimeSync() {
 async function handleServerChange(serverData: any) {
   try {
     // Get local updated_at timestamp
-    const localUpdatedAt = localStorage.getItem('supabase_lastSyncTime')
+    const localUpdatedAt = await getLocalLatestUpdateTime()
 
     if (!localUpdatedAt) {
       // No local data, just download
