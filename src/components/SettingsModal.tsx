@@ -162,7 +162,11 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   // Google Drive handlers
   const handleGoogleSignIn = async () => {
-    await signInWithGoogle()
+    const result = await signInWithGoogle()
+    if (!result.success && result.error) {
+      setGoogleSyncStatus(`✗ ${result.error}`)
+      setTimeout(() => setGoogleSyncStatus(null), 8000)
+    }
   }
 
   const handleGoogleSignOut = () => {
@@ -209,7 +213,11 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   // OneDrive handlers
   const handleOneDriveSignIn = async () => {
-    await signInWithMicrosoft()
+    const result = await signInWithMicrosoft()
+    if (!result.success && result.error) {
+      setOneDriveSyncStatus(`✗ ${result.error}`)
+      setTimeout(() => setOneDriveSyncStatus(null), 8000)
+    }
   }
 
   const handleOneDriveSignOut = () => {
