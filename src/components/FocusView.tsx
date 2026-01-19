@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { CheckCircle2, Circle, Clock, Flame, Calendar, Moon } from 'lucide-react'
 import { db } from '../lib/db'
-import { cn } from '../lib/utils'
+import { cn, ensureDate, ensureString } from '../lib/utils'
 import type { Entry } from '../types'
 
 interface TimeHorizonSection {
@@ -21,8 +21,9 @@ const timeHorizons: TimeHorizonSection[] = [
     icon: Flame,
     color: 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800',
     filter: (entry, now) => {
-      if (!entry.date) return false
-      const hoursDiff = (entry.date.getTime() - now.getTime()) / (1000 * 60 * 60)
+      const entryDate = ensureDate(entry.date)
+      if (!entryDate) return false
+      const hoursDiff = (entryDate.getTime() - now.getTime()) / (1000 * 60 * 60)
       return hoursDiff >= -24 && hoursDiff <= 24
     },
   },
@@ -33,8 +34,9 @@ const timeHorizons: TimeHorizonSection[] = [
     icon: Calendar,
     color: 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800',
     filter: (entry, now) => {
-      if (!entry.date) return false
-      const daysDiff = (entry.date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      const entryDate = ensureDate(entry.date)
+      if (!entryDate) return false
+      const daysDiff = (entryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
       return daysDiff > 1 && daysDiff <= 7
     },
   },
@@ -45,8 +47,9 @@ const timeHorizons: TimeHorizonSection[] = [
     icon: Moon,
     color: 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800',
     filter: (entry, now) => {
-      if (!entry.date) return true // No date = backlog
-      const daysDiff = (entry.date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      const entryDate = ensureDate(entry.date)
+      if (!entryDate) return true // No date = backlog
+      const daysDiff = (entryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
       return daysDiff > 7
     },
   },
@@ -126,21 +129,33 @@ export function FocusView() {
                       </button>
 
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium">{entry.title || entry.content.substring(0, 60)}</h3>
-                        {entry.title && entry.content !== entry.title && (
-                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                            {entry.content}
-                          </p>
-                        )}
+                        {(() => {
+                          const entryContent = ensureString(entry.content)
+                          return (
+                            <>
+                              <h3 className="font-medium">
+                                {entry.title || entryContent.substring(0, 60)}
+                              </h3>
+                              {entry.title && entryContent !== entry.title && (
+                                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                  {entryContent}
+                                </p>
+                              )}
+                            </>
+                          )
+                        })()}
 
                         <div className="flex flex-wrap items-center gap-2 mt-2">
-                          {entry.date && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Clock className="w-3 h-3" />
-                              {entry.date.toLocaleDateString()} {entry.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </div>
-                          )}
-                          {entry.tags && entry.tags.length > 0 && entry.tags.map((tag) => (
+                          {(() => {
+                            const entryDate = ensureDate(entry.date)
+                            return entryDate ? (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Clock className="w-3 h-3" />
+                                {entryDate.toLocaleDateString()} {entryDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            ) : null
+                          })()}
+                          {(entry.tags || []).length > 0 && (entry.tags || []).map((tag) => (
                             <span
                               key={tag}
                               className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded text-xs"

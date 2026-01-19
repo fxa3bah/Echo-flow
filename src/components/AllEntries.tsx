@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Trash2, Calendar as CalendarIcon, Tag as TagIcon, CheckSquare, Square, Edit3, X } from 'lucide-react'
 import { db } from '../lib/db'
-import { cn } from '../lib/utils'
+import { cn, ensureDate, ensureString } from '../lib/utils'
 import type { Entry } from '../types'
 
 type SortField = 'date' | 'type' | 'content' | 'source'
@@ -16,7 +16,7 @@ export function AllEntries() {
   const [editedTags, setEditedTags] = useState('')
 
   const stripAiActionLines = (text: string) =>
-    text
+    ensureString(text)
       .split('\n')
       .filter((line) => !line.trim().startsWith('### AI Actions'))
       .join('\n')
@@ -32,23 +32,25 @@ export function AllEntries() {
       const allEntries = await db.entries.toArray()
       const cleanedEntries = allEntries
         .filter((entry) => {
-          if (!entry.content.trim().startsWith('### AI Actions')) return true
+          const content = ensureString(entry.content)
+          if (!content.trim().startsWith('### AI Actions')) return true
           db.entries.delete(entry.id).catch(console.error)
           return false
         })
         .map((entry) => {
-        if (entry.type === 'diary') {
-          const cleanedContent = stripAiActionLines(entry.content)
-          if (cleanedContent !== entry.content) {
-            db.entries.update(entry.id, {
-              content: cleanedContent,
-              updatedAt: new Date(),
-            }).catch(console.error)
-            return { ...entry, content: cleanedContent }
+          const content = ensureString(entry.content)
+          if (entry.type === 'diary') {
+            const cleanedContent = stripAiActionLines(content)
+            if (cleanedContent !== content) {
+              db.entries.update(entry.id, {
+                content: cleanedContent,
+                updatedAt: new Date(),
+              }).catch(console.error)
+              return { ...entry, content: cleanedContent }
+            }
           }
-        }
-        return entry
-      })
+          return { ...entry, content }
+        })
       setEntries(cleanedEntries)
     } catch (error) {
       console.error('Failed to load data:', error)
@@ -64,9 +66,9 @@ export function AllEntries() {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(
         (e) =>
-          e.content.toLowerCase().includes(query) ||
+          ensureString(e.content).toLowerCase().includes(query) ||
           (e.title && e.title.toLowerCase().includes(query)) ||
-          e.tags.some((tag) => tag.toLowerCase().includes(query))
+          (e.tags || []).some((tag) => tag.toLowerCase().includes(query))
       )
     }
 
@@ -75,9 +77,12 @@ export function AllEntries() {
       let comparison = 0
 
       switch (sortField) {
-        case 'date':
-          comparison = a.date.getTime() - b.date.getTime()
+        case 'date': {
+          const aDate = ensureDate(a.date)
+          const bDate = ensureDate(b.date)
+          comparison = (aDate?.getTime() ?? 0) - (bDate?.getTime() ?? 0)
           break
+        }
         case 'type':
           comparison = a.type.localeCompare(b.type)
           break
@@ -85,7 +90,7 @@ export function AllEntries() {
           comparison = a.source.localeCompare(b.source)
           break
         case 'content':
-          comparison = a.content.localeCompare(b.content)
+          comparison = ensureString(a.content).localeCompare(ensureString(b.content))
           break
       }
 
@@ -142,10 +147,11 @@ export function AllEntries() {
       .filter(Boolean)
 
     try {
+      const nextContent = ensureString(editingEntry.content).trim()
       await db.entries.update(editingEntry.id, {
         title: editingEntry.title?.trim() || undefined,
-        content: editingEntry.content.trim(),
-        date: editingEntry.date,
+        content: nextContent,
+        date: ensureDate(editingEntry.date) ?? new Date(),
         tags: normalizedTags,
         updatedAt: new Date(),
       })
@@ -156,7 +162,8 @@ export function AllEntries() {
     }
   }
 
-  const formatDateTimeLocal = (date: Date) => {
+  const formatDateTimeLocal = (date: Date | null) => {
+    if (!date) return ''
     const offset = date.getTimezoneOffset()
     const local = new Date(date.getTime() - offset * 60 * 1000)
     return local.toISOString().slice(0, 16)
@@ -276,10 +283,19 @@ export function AllEntries() {
                     <div className="flex items-center gap-2">
                       <CalendarIcon className="w-4 h-4 text-muted-foreground" />
                       <div>
-                        <div>{entry.date.toLocaleDateString()}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {entry.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
+                        {(() => {
+                          const entryDate = ensureDate(entry.date)
+                          return entryDate ? (
+                            <>
+                              <div>{entryDate.toLocaleDateString()}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {entryDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-xs text-muted-foreground">No date</div>
+                          )
+                        })()}
                       </div>
                     </div>
                   </td>
@@ -309,7 +325,7 @@ export function AllEntries() {
                             entry.completed && 'line-through text-muted-foreground'
                           )}
                         >
-                          {entry.content}
+                          {ensureString(entry.content)}
                         </p>
                       </div>
                     </div>
@@ -324,9 +340,9 @@ export function AllEntries() {
 
                   {/* Tags */}
                   <td className="p-3 align-top">
-                    {entry.tags.length > 0 && (
+                    {(entry.tags || []).length > 0 && (
                       <div className="flex flex-wrap gap-1">
-                        {entry.tags.map((tag, i) => (
+                        {(entry.tags || []).map((tag, i) => (
                           <span
                             key={i}
                             className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted rounded text-xs"
@@ -404,7 +420,7 @@ export function AllEntries() {
               <div>
                 <label className="block text-xs font-medium mb-1">Content</label>
                 <textarea
-                  value={editingEntry.content}
+                  value={ensureString(editingEntry.content)}
                   onChange={(e) =>
                     setEditingEntry((prev) => (prev ? { ...prev, content: e.target.value } : prev))
                   }
@@ -416,7 +432,7 @@ export function AllEntries() {
                 <label className="block text-xs font-medium mb-1">Date &amp; Time</label>
                 <input
                   type="datetime-local"
-                  value={formatDateTimeLocal(editingEntry.date)}
+                  value={formatDateTimeLocal(ensureDate(editingEntry.date))}
                   onChange={(e) => {
                     const nextDate = e.target.value ? new Date(e.target.value) : new Date()
                     setEditingEntry((prev) => (prev ? { ...prev, date: nextDate } : prev))

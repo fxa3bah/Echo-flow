@@ -25,6 +25,17 @@ export function formatDateTime(date: Date): string {
   return `${formatDate(date)} at ${formatTime(date)}`
 }
 
+export function ensureDate(value: unknown): Date | null {
+  if (!value) return null
+  if (value instanceof Date) return value
+  const parsed = new Date(value as string)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+export function ensureString(value: unknown): string {
+  return typeof value === 'string' ? value : ''
+}
+
 export function isSameDay(date1: Date, date2: Date): boolean {
   return (
     date1.getFullYear() === date2.getFullYear() &&
