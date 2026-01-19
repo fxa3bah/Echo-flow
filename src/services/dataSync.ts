@@ -35,6 +35,13 @@ export async function getLocalLatestUpdateTime(): Promise<string | null> {
   ])
 
   let latestTimestamp = 0
+  const localChangeTimestamp = localStorage.getItem('local_lastChangeTime')
+  if (localChangeTimestamp) {
+    const parsedLocalChange = new Date(localChangeTimestamp).getTime()
+    if (!Number.isNaN(parsedLocalChange)) {
+      latestTimestamp = parsedLocalChange
+    }
+  }
 
   const considerDate = (value?: Date | string) => {
     if (!value) return

@@ -281,11 +281,11 @@ export function DiaryEditor() {
   }, [content])
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container mx-auto px-4 py-6 max-w-4xl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold mb-1">Daily Notes</h2>
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-semibold">{formatDate(selectedDate)}</h2>
           <p className="text-sm text-muted-foreground">
             {isSaving
               ? 'Saving...'
@@ -319,14 +319,9 @@ export function DiaryEditor() {
         </div>
       </div>
 
-      {/* Date Display */}
-      <div className="mb-4">
-        <h3 className="text-xl font-semibold">{formatDate(selectedDate)}</h3>
-      </div>
-
       {/* Transcriptions Section */}
       {dayTranscriptions && dayTranscriptions.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-5">
           <button
             onClick={() => setTranscriptionsExpanded(!transcriptionsExpanded)}
             className="w-full flex items-center justify-between mb-2 p-2 hover:bg-accent rounded transition-colors"
@@ -363,7 +358,7 @@ export function DiaryEditor() {
 
       {/* Tasks & Reminders Section */}
       {dayEntries && dayEntries.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-5">
           <button
             onClick={() => setTasksExpanded(!tasksExpanded)}
             className="w-full flex items-center justify-between mb-2 p-2 hover:bg-accent rounded transition-colors"
@@ -451,10 +446,10 @@ export function DiaryEditor() {
         <div className="flex items-center justify-between">
           <button
             onClick={() => setNotesExpanded(!notesExpanded)}
-            className="flex items-center gap-2 p-2 hover:bg-accent rounded transition-colors"
+            className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded transition-colors"
           >
             <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-              Daily Notes
+              Notes
             </h4>
             {notesExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
@@ -482,7 +477,7 @@ export function DiaryEditor() {
             <div className="border border-border rounded-lg bg-card relative">
               {isPreviewMode ? (
                 <div
-                  className="w-full p-4 min-h-[300px] prose prose-sm dark:prose-invert max-w-none"
+                  className="w-full p-4 min-h-[320px] prose prose-sm dark:prose-invert max-w-none"
                   dangerouslySetInnerHTML={{ __html: renderedHtml }}
                 />
               ) : (
@@ -491,8 +486,8 @@ export function DiaryEditor() {
                     ref={textareaRef}
                     value={content}
                     onChange={handleContentChange}
-                    placeholder="Write your thoughts for today... (Markdown supported)"
-                    className="w-full p-4 bg-transparent border-none focus:outline-none resize-none min-h-[300px] font-sans text-sm"
+                    placeholder="Start typing... (Markdown supported)"
+                    className="w-full p-4 bg-transparent border-none focus:outline-none resize-none min-h-[320px] font-sans text-sm leading-relaxed"
                     style={{ overflow: 'hidden' }}
                   />
 
