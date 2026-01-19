@@ -70,8 +70,11 @@ export interface SupabaseUserInfo {
  * Check if Supabase is configured
  */
 export function isSupabaseConfigured(): boolean {
+  // Check if Supabase is configured and not using placeholder values
   return !!(SUPABASE_URL && SUPABASE_ANON_KEY &&
-    SUPABASE_URL !== '' && SUPABASE_ANON_KEY !== '')
+    SUPABASE_URL !== '' && SUPABASE_ANON_KEY !== '' &&
+    !SUPABASE_URL.includes('YOUR_') && !SUPABASE_ANON_KEY.includes('YOUR_') &&
+    !SUPABASE_URL.includes('your-') && !SUPABASE_ANON_KEY.includes('your-'))
 }
 
 /**
