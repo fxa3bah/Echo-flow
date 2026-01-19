@@ -116,6 +116,44 @@ export class EchoFlowDatabase extends Dexie {
 
 export const db = new EchoFlowDatabase()
 
+const triggerSupabaseSync = () => {
+  import('../services/supabaseSync')
+    .then(({ triggerLocalSync }) => {
+      triggerLocalSync()
+    })
+    .catch((err: any) => {
+      // Supabase might not be configured, that's okay
+      console.debug('Sync trigger skipped:', err.message)
+    })
+}
+
+const registerChangeHooks = () => {
+  const tables: Array<keyof EchoFlowDatabase> = [
+    'entries',
+    'transcriptions',
+    'diaryEntries',
+    'tags',
+    'settings',
+  ]
+
+  tables.forEach((tableName) => {
+    const table = (db as any)[tableName]
+    if (!table?.hook) return
+
+    table.hook('creating', () => {
+      triggerSupabaseSync()
+    })
+    table.hook('updating', () => {
+      triggerSupabaseSync()
+    })
+    table.hook('deleting', () => {
+      triggerSupabaseSync()
+    })
+  })
+}
+
+registerChangeHooks()
+
 // Initialize default settings
 db.on('ready', async () => {
   const existingSettings = await db.settings.get('default')
@@ -133,20 +171,10 @@ db.on('ready', async () => {
 // Trigger sync when local data changes (only if Dexie Observable is available).
 const changesEvent = (db as any)._events?.changes
 if (changesEvent?.subscribe) {
-  // Import dynamically to avoid circular dependency
   ;(db as any).on('changes', (changes: any) => {
     console.log('IndexedDB changes detected:', changes.length, 'changes')
-
-    // Import triggerLocalSync dynamically to avoid circular dependency
-    import('../services/supabaseSync')
-      .then(({ triggerLocalSync }) => {
-        triggerLocalSync()
-      })
-      .catch((err: any) => {
-        // Supabase might not be configured, that's okay
-        console.debug('Sync trigger skipped:', err.message)
-      })
+    triggerSupabaseSync()
   })
 } else {
-  console.debug('Dexie changes event not available; skipping sync triggers.')
+  console.debug('Dexie changes event not available; using table hooks for sync triggers.')
 }
