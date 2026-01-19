@@ -300,6 +300,8 @@ export async function uploadToSupabase(): Promise<{ success: boolean; error?: st
         user_id: user.id,
         data: data,
         updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id',
       })
 
     if (error) {
