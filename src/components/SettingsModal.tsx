@@ -1,4 +1,4 @@
-import { X, FileJson, FileText, Upload, Download, FolderSync, Cloud, Check, LogOut } from 'lucide-react'
+import { X, FileJson, FileText, Upload, Download, FolderSync, Check, LogOut } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { exportAsJSON, exportAsText } from '../lib/export'
 import { downloadDataAsFile, importData, selectSyncFolder, saveToSyncFolder, loadFromSyncFolder, startAutoSync, isSyncFolderSet, getLastSyncTime } from '../services/dataSync'

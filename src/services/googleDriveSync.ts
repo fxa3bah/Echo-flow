@@ -29,24 +29,10 @@ const TOKEN_EXPIRY_KEY = 'googleDrive_tokenExpiry'
 const USER_INFO_KEY = 'googleDrive_userInfo'
 const FILE_ID_KEY = 'googleDrive_fileId'
 
-interface TokenResponse {
-  access_token: string
-  expires_in: number
-  scope: string
-  token_type: string
-}
-
 interface UserInfo {
   email: string
   name: string
   picture?: string
-}
-
-interface GoogleDriveFile {
-  id: string
-  name: string
-  mimeType: string
-  modifiedTime: string
 }
 
 /**
