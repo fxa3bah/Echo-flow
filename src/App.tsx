@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useThemeStore } from './stores/themeStore'
 import { VoiceRecorder } from './components/VoiceRecorder'
 import { Navigation } from './components/Navigation'
@@ -8,8 +8,10 @@ import { FocusView } from './components/FocusView'
 import { DiaryEditor } from './components/DiaryEditor'
 import { AIInsights } from './components/AIInsights'
 import { SettingsModal } from './components/SettingsModal'
+import { LoginScreen } from './components/LoginScreen'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useReminderNotifications } from './hooks/useReminderNotifications'
+import { getCurrentUser, isSupabaseConfigured } from './services/supabaseSync'
 import { cn } from './lib/utils'
 
 type View = 'home' | 'aiinsights' | 'entries' | 'calendar' | 'focus' | 'diary'
@@ -17,7 +19,32 @@ type View = 'home' | 'aiinsights' | 'entries' | 'calendar' | 'focus' | 'diary'
 function App() {
   const [currentView, setCurrentView] = useState<View>('home')
   const [showSettings, setShowSettings] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const { theme } = useThemeStore()
+
+  // Check authentication on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (!isSupabaseConfigured()) {
+        // Supabase not configured, allow offline use
+        setIsAuthenticated(false)
+        setIsCheckingAuth(false)
+        return
+      }
+
+      const user = await getCurrentUser()
+      setIsAuthenticated(!!user)
+      setIsCheckingAuth(false)
+    }
+
+    checkAuth()
+  }, [])
+
+  // Handle successful login
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true)
+  }
 
   // Keyboard shortcuts
   useKeyboardShortcuts([
@@ -54,6 +81,28 @@ function App() {
   ])
   useReminderNotifications()
 
+  // Show loading while checking auth
+  if (isCheckingAuth) {
+    return (
+      <div className={cn('min-h-screen flex items-center justify-center transition-colors duration-200', theme)}>
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show login screen if not authenticated
+  if (!isAuthenticated && isSupabaseConfigured()) {
+    return (
+      <div className={cn('transition-colors duration-200', theme)}>
+        <LoginScreen onLoginSuccess={handleLoginSuccess} />
+      </div>
+    )
+  }
+
+  // Show main app
   return (
     <div className={cn('min-h-screen transition-colors duration-200', theme)}>
       <div className="flex flex-col h-screen">

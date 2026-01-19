@@ -112,8 +112,9 @@ export async function signUpWithEmail(
       }
     }
 
-    // Auto-sync data after signup
+    // Auto-sync data after signup and start real-time sync
     await uploadToSupabase()
+    startSupabaseAutoSync(5)
 
     return {
       success: true,
@@ -163,8 +164,9 @@ export async function signInWithEmail(
       }
     }
 
-    // Auto-sync data after login
+    // Auto-sync data after login and start real-time sync
     await downloadFromSupabase()
+    startSupabaseAutoSync(5)
 
     return {
       success: true,
@@ -194,6 +196,7 @@ export async function signOut(): Promise<{ success: boolean; error?: string }> {
       }
     }
 
+    // Stop all sync activities
     stopSupabaseAutoSync()
 
     return { success: true }
@@ -395,6 +398,10 @@ export function getSupabaseLastSyncTime(): string | null {
 let supabaseAutoSyncInterval: number | null = null
 
 export function startSupabaseAutoSync(intervalMinutes: number = 5) {
+  // Start real-time subscription for instant sync
+  startRealtimeSync()
+
+  // Also keep periodic upload as backup (every 5 minutes)
   if (supabaseAutoSyncInterval) {
     clearInterval(supabaseAutoSyncInterval)
   }
@@ -404,15 +411,19 @@ export function startSupabaseAutoSync(intervalMinutes: number = 5) {
     if (authenticated) {
       const result = await uploadToSupabase()
       if (result.success) {
-        console.log('Supabase auto-sync completed')
+        console.log('Supabase periodic backup sync completed')
       } else {
-        console.error('Supabase auto-sync failed:', result.error)
+        console.error('Supabase periodic sync failed:', result.error)
       }
     }
   }, intervalMinutes * 60 * 1000)
 }
 
 export function stopSupabaseAutoSync() {
+  // Stop real-time sync
+  stopRealtimeSync()
+
+  // Stop periodic sync
   if (supabaseAutoSyncInterval) {
     clearInterval(supabaseAutoSyncInterval)
     supabaseAutoSyncInterval = null
@@ -431,4 +442,127 @@ export function onAuthStateChange(callback: (user: User | null) => void) {
   return client.auth.onAuthStateChange((_event, session) => {
     callback(session?.user || null)
   })
+}
+
+/**
+ * Real-Time Sync Functions
+ */
+let realtimeChannel: any = null
+
+/**
+ * Start real-time subscription for instant sync
+ */
+export async function startRealtimeSync() {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase not configured, skipping realtime sync')
+    return
+  }
+
+  const client = getSupabaseClient()
+  const user = await getCurrentUser()
+
+  if (!user) {
+    console.warn('No user authenticated, skipping realtime sync')
+    return
+  }
+
+  // Unsubscribe from existing channel if any
+  if (realtimeChannel) {
+    client.removeChannel(realtimeChannel)
+  }
+
+  console.log('Starting real-time sync for user:', user.email)
+
+  // Subscribe to changes on user_data table
+  realtimeChannel = client
+    .channel('user_data_changes')
+    .on(
+      'postgres_changes',
+      {
+        event: '*', // Listen to INSERT, UPDATE, DELETE
+        schema: 'public',
+        table: 'user_data',
+        filter: `user_id=eq.${user.id}`, // Only our data
+      },
+      async (payload) => {
+        console.log('Real-time change detected:', payload.eventType)
+
+        // When server changes, download and merge with local
+        if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+          await handleServerChange(payload.new)
+        } else if (payload.eventType === 'DELETE') {
+          console.warn('Server data deleted')
+        }
+      }
+    )
+    .subscribe((status) => {
+      console.log('Real-time subscription status:', status)
+    })
+}
+
+/**
+ * Stop real-time subscription
+ */
+export function stopRealtimeSync() {
+  if (realtimeChannel) {
+    const client = getSupabaseClient()
+    client.removeChannel(realtimeChannel)
+    realtimeChannel = null
+    console.log('Real-time sync stopped')
+  }
+}
+
+/**
+ * Handle incoming changes from server
+ * Merge with local data using timestamp-based resolution
+ */
+async function handleServerChange(serverData: any) {
+  try {
+    // Get local updated_at timestamp
+    const localUpdatedAt = localStorage.getItem('supabase_lastSyncTime')
+
+    if (!localUpdatedAt) {
+      // No local data, just download
+      console.log('No local sync time, downloading server data...')
+      await downloadFromSupabase()
+      return
+    }
+
+    // Compare timestamps
+    const serverTimestamp = new Date(serverData.updated_at).getTime()
+    const localTimestamp = new Date(localUpdatedAt).getTime()
+
+    if (serverTimestamp > localTimestamp) {
+      // Server is newer, download and overwrite local
+      console.log('Server has newer data, syncing down...')
+      await downloadFromSupabase()
+    } else {
+      // Local is newer or equal, no action needed
+      console.log('Local data is up to date')
+    }
+  } catch (error) {
+    console.error('Error handling server change:', error)
+  }
+}
+
+/**
+ * Debounced upload to prevent excessive syncs
+ */
+let uploadDebounceTimer: number | null = null
+const UPLOAD_DEBOUNCE_MS = 2000 // 2 seconds
+
+export function triggerLocalSync() {
+  // Clear existing timer
+  if (uploadDebounceTimer) {
+    clearTimeout(uploadDebounceTimer)
+  }
+
+  // Schedule upload after debounce period
+  uploadDebounceTimer = window.setTimeout(async () => {
+    const authenticated = await isAuthenticated()
+    if (authenticated) {
+      console.log('Local change detected, uploading to Supabase...')
+      await uploadToSupabase()
+    }
+  }, UPLOAD_DEBOUNCE_MS)
 }

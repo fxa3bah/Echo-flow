@@ -3,15 +3,10 @@ import { useState, useRef, useEffect } from 'react'
 import { exportAsJSON, exportAsText } from '../lib/export'
 import { downloadDataAsFile, importData, selectSyncFolder, saveToSyncFolder, loadFromSyncFolder, startAutoSync, isSyncFolderSet, getLastSyncTime } from '../services/dataSync'
 import {
-  isSupabaseConfigured,
   signOut as signOutFromSupabase,
-  uploadToSupabase,
-  downloadFromSupabase,
   getSupabaseLastSyncTime,
-  startSupabaseAutoSync,
   getCurrentUser,
 } from '../services/supabaseSync'
-import { AuthModal } from './AuthModal'
 import { cn } from '../lib/utils'
 
 interface SettingsModalProps {
@@ -28,7 +23,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Supabase state
-  const [showAuthModal, setShowAuthModal] = useState(false)
   const [supabaseUser, setSupabaseUser] = useState<any>(null)
   const [supabaseSyncStatus, setSupabaseSyncStatus] = useState<string | null>(null)
 
@@ -146,67 +140,19 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   }
 
   // Supabase handlers
-  const handleSupabaseSignIn = () => {
-    if (!isSupabaseConfigured()) {
-      setSupabaseSyncStatus('✗ Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env file.')
-      setTimeout(() => setSupabaseSyncStatus(null), 8000)
-      return
-    }
-    setShowAuthModal(true)
-  }
-
   const handleSupabaseSignOut = async () => {
     const result = await signOutFromSupabase()
     if (result.success) {
       setSupabaseUser(null)
       setSupabaseSyncStatus('✓ Signed out successfully')
-      setTimeout(() => setSupabaseSyncStatus(null), 3000)
+      // Reload page to show login screen
+      setTimeout(() => {
+        window.location.reload()
+      }, 500)
     } else {
       setSupabaseSyncStatus(`✗ Error: ${result.error}`)
       setTimeout(() => setSupabaseSyncStatus(null), 5000)
     }
-  }
-
-  const handleSupabaseUpload = async () => {
-    setSyncing(true)
-    setSupabaseSyncStatus('Uploading to Supabase...')
-
-    const result = await uploadToSupabase()
-
-    if (result.success) {
-      setSupabaseSyncStatus('✓ Uploaded to Supabase successfully!')
-      // Start auto-sync
-      startSupabaseAutoSync(5)
-    } else {
-      setSupabaseSyncStatus(`✗ Error: ${result.error}`)
-    }
-
-    setSyncing(false)
-    setTimeout(() => setSupabaseSyncStatus(null), 5000)
-  }
-
-  const handleSupabaseDownload = async () => {
-    setSyncing(true)
-    setSupabaseSyncStatus('Downloading from Supabase...')
-
-    const result = await downloadFromSupabase()
-
-    if (result.success) {
-      setSupabaseSyncStatus(`✓ Downloaded from Supabase! Imported ${result.imported?.entries || 0} entries.`)
-    } else {
-      setSupabaseSyncStatus(`✗ Error: ${result.error}`)
-    }
-
-    setSyncing(false)
-    setTimeout(() => setSupabaseSyncStatus(null), 5000)
-  }
-
-  const handleAuthSuccess = async () => {
-    // Refresh user info
-    const user = await getCurrentUser()
-    setSupabaseUser(user)
-    setSupabaseSyncStatus('✓ Authenticated successfully!')
-    setTimeout(() => setSupabaseSyncStatus(null), 3000)
   }
 
   return (
@@ -260,15 +206,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             </div>
           </section>
 
-          {/* Supabase Cloud Sync */}
+          {/* Cloud Sync Status */}
           <section className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 p-4 rounded-lg border border-emerald-200 dark:border-emerald-800">
             <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
               <Database className="w-5 h-5" />
-              Supabase Cloud Sync ⭐ Recommended
+              Cloud Sync
             </h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Easy cloud sync with email/password. No OAuth setup needed! Works on all devices.
-            </p>
 
             {supabaseUser ? (
               <div className="space-y-3">
@@ -276,59 +219,33 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   <Check className="w-4 h-4 text-green-600" />
                   <span className="font-medium">Signed in as: {supabaseUser.email}</span>
                 </div>
+
+                {/* Real-time sync indicator */}
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-muted-foreground">Real-time sync active</span>
+                </div>
+
                 <div className="text-xs text-muted-foreground">
                   Last synced: {formatLastSync(getSupabaseLastSyncTime())}
                 </div>
-                <div className="flex gap-2 flex-wrap">
-                  <button
-                    onClick={handleSupabaseUpload}
-                    disabled={syncing}
-                    className={cn(
-                      'flex items-center gap-2 px-3 py-2 rounded-lg text-sm',
-                      'bg-emerald-600 text-white hover:bg-emerald-700',
-                      'transition-colors disabled:opacity-50'
-                    )}
-                  >
-                    <Upload className="w-4 h-4" />
-                    {syncing ? 'Uploading...' : 'Upload Now'}
-                  </button>
-                  <button
-                    onClick={handleSupabaseDownload}
-                    disabled={syncing}
-                    className={cn(
-                      'flex items-center gap-2 px-3 py-2 rounded-lg text-sm',
-                      'bg-green-600 text-white hover:bg-green-700',
-                      'transition-colors disabled:opacity-50'
-                    )}
-                  >
-                    <Download className="w-4 h-4" />
-                    {syncing ? 'Downloading...' : 'Download Now'}
-                  </button>
-                  <button
-                    onClick={handleSupabaseSignOut}
-                    className={cn(
-                      'flex items-center gap-2 px-3 py-2 rounded-lg text-sm',
-                      'bg-secondary text-secondary-foreground hover:bg-secondary/90',
-                      'transition-colors'
-                    )}
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Sign Out
-                  </button>
-                </div>
+
+                <button
+                  onClick={handleSupabaseSignOut}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-2 rounded-lg text-sm',
+                    'bg-secondary text-secondary-foreground hover:bg-secondary/90',
+                    'transition-colors'
+                  )}
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign Out
+                </button>
               </div>
             ) : (
-              <button
-                onClick={handleSupabaseSignIn}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2 rounded-lg',
-                  'bg-emerald-600 text-white hover:bg-emerald-700',
-                  'transition-colors'
-                )}
-              >
-                <Database className="w-5 h-5" />
-                Sign In / Sign Up
-              </button>
+              <p className="text-sm text-muted-foreground">
+                Please sign in to enable cloud sync
+              </p>
             )}
 
             {supabaseSyncStatus && (
@@ -341,7 +258,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             )}
 
             <p className="text-xs text-muted-foreground mt-3">
-              ✨ Best choice! Email/password login. Auto-syncs every 5 minutes. 500MB free storage. Works everywhere!
+              ✨ All changes are automatically synced across devices in real-time!
             </p>
           </section>
 
@@ -532,13 +449,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </section>
         </div>
       </div>
-
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onAuthSuccess={handleAuthSuccess}
-      />
     </div>
   )
 }
