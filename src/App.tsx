@@ -17,28 +17,41 @@ import { cn } from './lib/utils'
 type View = 'home' | 'aiinsights' | 'entries' | 'calendar' | 'focus' | 'diary'
 
 function App() {
+  console.log('App component rendering...')
   const [currentView, setCurrentView] = useState<View>('home')
   const [showSettings, setShowSettings] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const { theme } = useThemeStore()
+  console.log('App state:', { isAuthenticated, isCheckingAuth, theme })
 
   // Check authentication on mount
   useEffect(() => {
     const checkAuth = async () => {
+      console.log('Checking auth...')
+      console.log('Supabase configured:', isSupabaseConfigured())
+
       if (!isSupabaseConfigured()) {
         // Supabase not configured, allow offline use
+        console.log('Supabase not configured, allowing offline use')
         setIsAuthenticated(false)
         setIsCheckingAuth(false)
         return
       }
 
+      console.log('Getting current user...')
       const user = await getCurrentUser()
+      console.log('Current user:', user)
       setIsAuthenticated(!!user)
       setIsCheckingAuth(false)
     }
 
-    checkAuth()
+    checkAuth().catch(err => {
+      console.error('Auth check failed:', err)
+      // Fallback to offline mode on error
+      setIsAuthenticated(false)
+      setIsCheckingAuth(false)
+    })
   }, [])
 
   // Handle successful login
@@ -83,11 +96,25 @@ function App() {
 
   // Show loading while checking auth
   if (isCheckingAuth) {
+    console.log('Rendering loading screen...')
     return (
-      <div className={cn('min-h-screen flex items-center justify-center transition-colors duration-200', theme)}>
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+      <div
+        className={cn('min-h-screen flex items-center justify-center transition-colors duration-200', theme)}
+        style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
+        <div className="text-center" style={{ textAlign: 'center' }}>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mb-4" style={{
+            width: '48px',
+            height: '48px',
+            borderWidth: '4px',
+            borderStyle: 'solid',
+            borderColor: '#3b82f6',
+            borderTopColor: 'transparent',
+            borderRadius: '50%',
+            marginBottom: '16px',
+            animation: 'spin 1s linear infinite'
+          }}></div>
+          <p style={{ color: '#666', fontSize: '16px' }}>Loading Echo Flow...</p>
         </div>
       </div>
     )
@@ -95,6 +122,7 @@ function App() {
 
   // Show login screen if not authenticated
   if (!isAuthenticated && isSupabaseConfigured()) {
+    console.log('Rendering login screen...')
     return (
       <div className={cn('transition-colors duration-200', theme)}>
         <LoginScreen onLoginSuccess={handleLoginSuccess} />
@@ -103,6 +131,7 @@ function App() {
   }
 
   // Show main app
+  console.log('Rendering main app...')
   return (
     <div className={cn('min-h-screen transition-colors duration-200', theme)}>
       <div className="flex flex-col h-screen">
