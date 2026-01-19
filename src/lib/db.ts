@@ -130,16 +130,23 @@ db.on('ready', async () => {
   }
 })
 
-// Trigger sync when local data changes
-// Import dynamically to avoid circular dependency
-;(db as any).on('changes', (changes: any) => {
-  console.log('IndexedDB changes detected:', changes.length, 'changes')
+// Trigger sync when local data changes (only if Dexie Observable is available).
+const changesEvent = (db as any)._events?.changes
+if (changesEvent?.subscribe) {
+  // Import dynamically to avoid circular dependency
+  ;(db as any).on('changes', (changes: any) => {
+    console.log('IndexedDB changes detected:', changes.length, 'changes')
 
-  // Import triggerLocalSync dynamically to avoid circular dependency
-  import('../services/supabaseSync').then(({ triggerLocalSync }) => {
-    triggerLocalSync()
-  }).catch((err: any) => {
-    // Supabase might not be configured, that's okay
-    console.debug('Sync trigger skipped:', err.message)
+    // Import triggerLocalSync dynamically to avoid circular dependency
+    import('../services/supabaseSync')
+      .then(({ triggerLocalSync }) => {
+        triggerLocalSync()
+      })
+      .catch((err: any) => {
+        // Supabase might not be configured, that's okay
+        console.debug('Sync trigger skipped:', err.message)
+      })
   })
-})
+} else {
+  console.debug('Dexie changes event not available; skipping sync triggers.')
+}
