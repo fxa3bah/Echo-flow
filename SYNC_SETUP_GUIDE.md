@@ -1,10 +1,67 @@
 # Echo Flow - Easy Sync Setup Guide
 
-## Problem: Syncing Between Phone and Windows Laptop
+## 🎉 NEW: Direct Cloud API Integration Available!
 
-Echo Flow already has cloud sync built-in! Here are the **easiest free options** without complicated setup:
+**The mobile sync problem is now SOLVED!** Echo Flow now supports direct Google Drive and OneDrive API integration.
+
+✅ **What this means for you:**
+- Works on **all devices** including mobile browsers
+- No folder picker needed
+- Simple "Sign in with Google/Microsoft" button
+- Automatic sync every 5 minutes
+- **See [CLOUD_SYNC_SETUP.md](CLOUD_SYNC_SETUP.md) for setup instructions**
+
+The information below describes the older manual method and file picker approach, which still work but are no longer necessary if you use the API integration.
 
 ---
+
+## Problem: Syncing Between Phone and Windows Laptop (Old Method)
+
+Echo Flow has cloud sync built-in! However, there's an **important limitation on mobile devices** with the file picker method.
+
+---
+
+## 🚨 IMPORTANT: Mobile Browser Limitation
+
+### The Issue
+When you click "Select Sync Folder" on **Android or iPhone**, the file picker **ONLY shows local device storage** (Downloads, Documents folders). It **CANNOT access**:
+- ❌ Google Drive folders
+- ❌ OneDrive folders
+- ❌ Dropbox folders
+- ❌ iCloud folders
+
+**Why?** This is a browser limitation with the File System Access API, not an Echo Flow bug. Mobile browsers don't expose cloud storage folders through the file picker.
+
+### ✅ The Solution: Manual Export/Import (Works Now!)
+
+Use this simple workflow to sync between devices:
+
+#### **On Windows Laptop (or primary device):**
+1. Open Echo Flow → Settings (Ctrl+,)
+2. Click **"Download Backup"** button
+3. This saves `echo-flow-backup-2026-01-18.json` to your Downloads
+4. Upload this file to **Google Drive** (or OneDrive/Dropbox) using your browser or desktop app
+
+#### **On Android Phone (or secondary device):**
+1. Open **Google Drive app** on your phone
+2. Find and **download** the `echo-flow-backup-YYYY-MM-DD.json` file to your device
+3. Open **Echo Flow** in your mobile browser
+4. Go to Settings → Click **"Import Backup"**
+5. Select the downloaded JSON file from your device storage
+6. ✓ Done! All your data is now synced
+
+**Time required:** About 30-60 seconds per sync
+
+**When to sync:**
+- After making changes on one device
+- Before switching to another device
+- Once a day if you use both devices regularly
+
+---
+
+## Desktop-Only: Automatic Folder Sync
+
+The automatic folder sync feature **only works on desktop/laptop computers** because they have real synced folders. Here's how to set it up:
 
 ## ✅ Recommended: Google Drive (Easiest)
 
@@ -31,20 +88,11 @@ Echo Flow already has cloud sync built-in! Here are the **easiest free options**
    - Navigate to: `G:\My Drive\EchoFlow` (or create this folder)
    - Click "Save Now" to upload your data
 
-#### On Your Phone:
+#### ⚠️ On Your Phone:
 
-**Option A: Use Browser (PWA)**
-1. Open Chrome/Safari on your phone
-2. Go to your Echo Flow URL (e.g., https://your-echoflow-url.com)
-3. Open Settings
-4. Click "Choose Sync Folder" and select the same `EchoFlow` folder
-5. Click "Load Now" to download your data
+**DOES NOT WORK** - See the manual Export/Import method at the top of this guide instead.
 
-**Option B: Access Files Directly (if self-hosted)**
-1. Install Google Drive app on phone
-2. Navigate to the EchoFlow folder
-3. Open the JSON file to view/edit
-4. Echo Flow will auto-sync when you open it next
+The folder picker on mobile browsers cannot access cloud storage folders. Use the manual backup/restore method described above.
 
 ---
 
@@ -115,36 +163,28 @@ Echo Flow already has cloud sync built-in! Here are the **easiest free options**
 
 ### On Phone (Second Device):
 
-1. **Install Google Drive app** (if not already installed)
-2. **Open Echo Flow** in mobile browser
-3. **Add to Home Screen** (for PWA experience):
-   - Chrome Android: Menu → "Add to Home screen"
-   - Safari iOS: Share → "Add to Home Screen"
-4. **Open Settings** in Echo Flow
-5. **Enable Cloud Sync**:
-   - Toggle ON
-   - Click "Choose Sync Folder"
-   - Select the same `EchoFlow` folder
-6. **Load your data**:
-   - Click "Load Now"
-   - Wait for "Loaded X entries" message
-7. **Done!** Both devices now sync automatically
+**⚠️ MOBILE LIMITATION**: The automatic folder sync does not work on mobile browsers. Use the **Manual Export/Import** method described at the top of this guide instead.
+
+If you still want to add Echo Flow to your home screen:
+1. Open Echo Flow in Chrome/Safari
+2. Chrome Android: Menu → "Add to Home screen"
+3. Safari iOS: Share → "Add to Home Screen"
+
+Then use the manual backup/restore workflow for syncing data.
 
 ---
 
 ## Troubleshooting Common Issues
 
-### Problem: "Choose Sync Folder" button doesn't work on phone
+### 🚨 Problem: "Choose Sync Folder" only shows phone storage, not Google Drive
 
-**Solution**: The File System Access API doesn't work on all mobile browsers.
+**This is NORMAL on mobile devices!** Mobile browsers cannot access cloud storage folders through the file picker.
 
-**Workaround**:
-1. Use the Export/Import feature instead:
-   - On Windows: Settings → "Export Data" → Save JSON file to Google Drive
-   - On Phone: Download the JSON file from Google Drive
-   - In Echo Flow: Settings → "Import Data" → Select the JSON file
+**Solution**: Use the manual Export/Import workflow described at the top of this guide:
+1. **On Windows**: Settings → "Download Backup" → Upload to Google Drive
+2. **On Phone**: Download from Google Drive app → Settings → "Import Backup"
 
-2. Or use the web version on laptop only, and access Google Drive files directly on phone
+**Future Fix**: Google Drive API integration is planned (see Roadmap), which will allow automatic sync on mobile devices without needing the folder picker
 
 ### Problem: Data not syncing between devices
 
@@ -194,13 +234,23 @@ Echo Flow already has cloud sync built-in! Here are the **easiest free options**
 
 ## Future Sync Improvements (Roadmap)
 
-Coming in future versions:
+### Priority #1: Google Drive API Integration
+**Solves the mobile sync problem!**
+- Direct Google Drive API integration (no folder picker needed)
+- "Sign in with Google" button
+- Works on ALL devices (Windows, Android, iOS, Mac)
+- Automatic sync without manual export/import
+- Status: Can be implemented - let me know if you want this!
+
+### Other Planned Improvements:
 - Real-time sync (no 5-minute delay)
-- Conflict resolution UI
+- Conflict resolution UI for simultaneous edits
 - Sync history and version control
-- Offline queue for changes
+- Offline queue for changes made without internet
 - Multiple device simultaneous editing
 - Native mobile apps with better sync
+- OneDrive API integration
+- Dropbox API integration
 
 ---
 

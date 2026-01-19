@@ -9,6 +9,28 @@ This roadmap outlines planned features and enhancements for Echo Flow, organized
 
 ## 🎯 Phase 1: Core Enhancements (Q1-Q2 2026)
 
+### 1.0 🔥 Critical: Cross-Device Sync Improvements
+**Priority: HIGH** - Solves current mobile sync limitation
+
+- ✅ **Google Drive API Integration** (COMPLETED - v2.1)
+  - Direct Google Drive API instead of file picker
+  - "Sign in with Google" authentication
+  - Works on ALL platforms (Windows, Android, iOS, Mac)
+  - No folder picker needed - works in mobile browsers
+  - Automatic background sync every 5 minutes
+  - Resolves current limitation where mobile browsers can't access cloud folders
+
+- ✅ **OneDrive API Integration** (COMPLETED - v2.1)
+  - Microsoft account authentication
+  - Direct API access for Windows/Android/iOS users
+  - Better integration with Windows ecosystem
+
+- **Sync Status Improvements** (Planned)
+  - Real-time sync status indicator
+  - Conflict resolution UI
+  - Sync history with ability to restore previous versions
+  - Manual conflict resolution when needed
+
 ### 1.1 Enhanced Mobile Experience
 - **Native Mobile Apps** (iOS/Android)
   - React Native or Capacitor conversion
