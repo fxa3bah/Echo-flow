@@ -129,3 +129,17 @@ db.on('ready', async () => {
     })
   }
 })
+
+// Trigger sync when local data changes
+// Import dynamically to avoid circular dependency
+;(db as any).on('changes', (changes: any) => {
+  console.log('IndexedDB changes detected:', changes.length, 'changes')
+
+  // Import triggerLocalSync dynamically to avoid circular dependency
+  import('../services/supabaseSync').then(({ triggerLocalSync }) => {
+    triggerLocalSync()
+  }).catch((err: any) => {
+    // Supabase might not be configured, that's okay
+    console.debug('Sync trigger skipped:', err.message)
+  })
+})
