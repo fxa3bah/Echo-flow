@@ -283,9 +283,9 @@ export function DiaryEditor() {
   return (
     <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 max-w-5xl h-[calc(100vh-6rem)] flex flex-col">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 mb-3 sm:mb-4 pb-2 sm:pb-3 border-b border-border flex-shrink-0">
-        <div className="space-y-0.5">
-          <h2 className="text-xl sm:text-2xl font-bold">{formatDate(selectedDate)}</h2>
+      <div className="flex items-start sm:items-center justify-between gap-2 sm:gap-3 mb-3 sm:mb-4 pb-2 sm:pb-3 border-b border-border flex-shrink-0 flex-wrap">
+        <div className="space-y-0.5 flex-1 min-w-0">
+          <h2 className="text-lg sm:text-2xl font-bold">{formatDate(selectedDate)}</h2>
           <p className="text-[10px] sm:text-xs text-muted-foreground">
             {isSaving
               ? 'Saving...'
@@ -295,26 +295,26 @@ export function DiaryEditor() {
           </p>
         </div>
 
-        <div className="flex gap-1 sm:gap-2">
+        <div className="flex gap-1.5 sm:gap-2 flex-shrink-0">
           <button
             onClick={goToToday}
-            className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            className="px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors min-h-[36px] sm:min-h-[40px]"
           >
             Today
           </button>
           <button
             onClick={goToPreviousDay}
-            className="p-2 hover:bg-accent rounded-lg transition-colors"
+            className="p-1.5 sm:p-2 hover:bg-accent rounded-lg transition-colors min-h-[36px] min-w-[36px] sm:min-h-[40px] sm:min-w-[40px] flex items-center justify-center"
             aria-label="Previous day"
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={18} className="sm:w-5 sm:h-5" />
           </button>
           <button
             onClick={goToNextDay}
-            className="p-2 hover:bg-accent rounded-lg transition-colors"
+            className="p-1.5 sm:p-2 hover:bg-accent rounded-lg transition-colors min-h-[36px] min-w-[36px] sm:min-h-[40px] sm:min-w-[40px] flex items-center justify-center"
             aria-label="Next day"
           >
-            <ChevronRight size={20} />
+            <ChevronRight size={18} className="sm:w-5 sm:h-5" />
           </button>
         </div>
       </div>
@@ -445,7 +445,7 @@ export function DiaryEditor() {
 
         {/* Notes Section */}
         <div className="space-y-2 relative flex-1 flex flex-col">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <button
               onClick={() => setNotesExpanded(!notesExpanded)}
               className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded-lg transition-colors"
@@ -453,22 +453,22 @@ export function DiaryEditor() {
               <h4 className="text-xs sm:text-sm font-semibold text-foreground">
                 Notes
             </h4>
-            {notesExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            {notesExpanded ? <ChevronUp size={16} className="sm:w-[18px] sm:h-[18px]" /> : <ChevronDown size={16} className="sm:w-[18px] sm:h-[18px]" />}
           </button>
           {notesExpanded && (
             <button
               onClick={() => setIsPreviewMode(!isPreviewMode)}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors"
+              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors min-h-[36px] sm:min-h-[40px]"
             >
               {isPreviewMode ? (
                 <>
-                  <Edit3 size={16} />
-                  Edit
+                  <Edit3 size={14} className="sm:w-4 sm:h-4" />
+                  <span>Edit</span>
                 </>
               ) : (
                 <>
-                  <Eye size={16} />
-                  Preview
+                  <Eye size={14} className="sm:w-4 sm:h-4" />
+                  <span>Preview</span>
                 </>
               )}
             </button>

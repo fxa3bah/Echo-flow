@@ -148,24 +148,24 @@ function App() {
         {/* Main Content */}
         <main className="flex-1 overflow-auto">
           {currentView === 'home' && (
-            <div className="container mx-auto px-4 py-8 max-w-2xl">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold mb-2">Capture Your Thoughts</h2>
-                <p className="text-muted-foreground">
+            <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-2xl">
+              <div className="text-center mb-6 sm:mb-8 px-2">
+                <h2 className="text-2xl sm:text-3xl font-bold mb-2">Capture Your Thoughts</h2>
+                <p className="text-sm sm:text-base text-muted-foreground">
                   Voice record or use AI Chat to quickly capture tasks, notes, and ideas
                 </p>
               </div>
               <VoiceRecorder />
 
               {/* AI Chat Link */}
-              <div className="mt-8 p-6 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20">
-                <h3 className="text-lg font-semibold mb-2">Need AI assistance?</h3>
-                <p className="text-sm text-muted-foreground mb-4">
+              <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20 mx-2 sm:mx-0">
+                <h3 className="text-base sm:text-lg font-semibold mb-2">Need AI assistance?</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground mb-4">
                   Chat with AI to organize tasks, get insights, and manage your day
                 </p>
                 <button
                   onClick={() => setCurrentView('aiinsights')}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                  className="w-full sm:w-auto px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm sm:text-base min-h-[44px]"
                 >
                   Open AI Chat
                 </button>

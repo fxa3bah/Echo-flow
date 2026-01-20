@@ -106,9 +106,8 @@
 /* Touch-friendly minimum sizes for mobile */
 @media (max-width: 768px) {
   button:not(.no-min-size),
-  a:not(.no-min-size),
-  input[type="checkbox"]:not(.no-min-size) {
-    min-height: 44px;
+  a:not(.no-min-size) {
+    min-height: 40px;
   }
 
   /* Ensure text inputs are easier to tap */
@@ -116,8 +115,34 @@
   input[type="email"],
   input[type="password"],
   input[type="search"],
+  input[type="datetime-local"],
   textarea {
     min-height: 44px;
     font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  /* Better checkbox sizing */
+  input[type="checkbox"] {
+    min-height: 20px;
+    min-width: 20px;
+  }
+
+  /* Consistent container padding on mobile */
+  .container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
+/* Additional mobile improvements */
+@media (max-width: 640px) {
+  /* Prevent horizontal scroll */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Better button spacing */
+  button {
+    -webkit-tap-highlight-color: transparent;
   }
 }
