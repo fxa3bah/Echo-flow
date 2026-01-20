@@ -27,15 +27,15 @@ export function Navigation({ currentView, onViewChange, onOpenSettings }: Naviga
   ]
 
   return (
-    <nav className="flex items-center gap-1 md:gap-2">
+    <nav className="flex items-center gap-0.5 sm:gap-1 md:gap-2 flex-1 justify-end">
       {navItems.map((item) => (
         <button
           key={item.id}
           onClick={() => onViewChange(item.id)}
           className={cn(
-            'flex items-center gap-2 px-2 py-2 md:px-3 md:py-2 rounded-lg transition-colors',
+            'flex items-center justify-center gap-2 p-1.5 sm:p-2 md:px-3 md:py-2 rounded-md sm:rounded-lg transition-colors',
             'hover:bg-accent hover:text-accent-foreground',
-            'min-h-[44px] min-w-[44px]', // Minimum touch target size
+            'min-h-[36px] min-w-[36px] sm:min-h-[40px] sm:min-w-[40px] md:min-h-[44px] md:min-w-[44px]',
             currentView === item.id
               ? 'bg-primary text-primary-foreground'
               : 'text-muted-foreground'
@@ -43,7 +43,7 @@ export function Navigation({ currentView, onViewChange, onOpenSettings }: Naviga
           aria-label={item.label}
           title={item.label}
         >
-          <item.icon size={20} />
+          <item.icon size={18} className="sm:w-5 sm:h-5" />
           <span className="hidden md:inline text-sm font-medium">
             {item.label}
           </span>
@@ -52,20 +52,20 @@ export function Navigation({ currentView, onViewChange, onOpenSettings }: Naviga
 
       <button
         onClick={toggleTheme}
-        className="ml-1 md:ml-2 p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors min-h-[44px] min-w-[44px]"
+        className="ml-0.5 sm:ml-1 md:ml-2 p-1.5 sm:p-2 rounded-md sm:rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors min-h-[36px] min-w-[36px] sm:min-h-[40px] sm:min-w-[40px] md:min-h-[44px] md:min-w-[44px] flex items-center justify-center"
         aria-label="Toggle theme"
         title="Toggle theme"
       >
-        {actualTheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+        {actualTheme === 'dark' ? <Sun size={18} className="sm:w-5 sm:h-5" /> : <Moon size={18} className="sm:w-5 sm:h-5" />}
       </button>
 
       <button
         onClick={onOpenSettings}
-        className="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors min-h-[44px] min-w-[44px]"
+        className="p-1.5 sm:p-2 rounded-md sm:rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors min-h-[36px] min-w-[36px] sm:min-h-[40px] sm:min-w-[40px] md:min-h-[44px] md:min-w-[44px] flex items-center justify-center"
         aria-label="Settings"
         title="Settings (Ctrl+,)"
       >
-        <Settings size={20} />
+        <Settings size={18} className="sm:w-5 sm:h-5" />
       </button>
     </nav>
   )
