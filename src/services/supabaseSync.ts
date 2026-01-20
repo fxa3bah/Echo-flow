@@ -291,14 +291,18 @@ export async function uploadToSupabase(): Promise<{ success: boolean; error?: st
 
     // Export data as JSON
     const jsonData = await exportAllData()
-    const data = JSON.parse(jsonData)
+    const exportData = JSON.parse(jsonData)
+
+    // Remove the version field from the data we send to Supabase
+    // Store it in the JSONB data field instead of as a column
+    const { version, ...dataToStore } = exportData
 
     // Upsert to user_data table
     const { error } = await client
       .from('user_data')
       .upsert({
         user_id: user.id,
-        data: data,
+        data: dataToStore,
         updated_at: new Date().toISOString(),
       }, {
         onConflict: 'user_id',
