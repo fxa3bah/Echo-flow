@@ -136,8 +136,11 @@ function App() {
     <div className={cn('min-h-screen transition-colors duration-200', theme)}>
       <div className="flex flex-col h-screen">
         {/* Header - Sticky Navigation */}
-        <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 py-3 flex items-center justify-between shadow-sm">
-          <h1 className="text-xl font-bold text-foreground">Echo Flow</h1>
+        <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-2 sm:px-4 py-1.5 sm:py-3 flex items-center justify-between shadow-sm gap-1 sm:gap-4">
+          <h1 className="text-sm sm:text-xl font-bold text-foreground whitespace-nowrap flex-shrink-0">
+            <span className="hidden sm:inline">Echo Flow</span>
+            <span className="sm:hidden">Echo</span>
+          </h1>
           <Navigation
             currentView={currentView}
             onViewChange={setCurrentView}
