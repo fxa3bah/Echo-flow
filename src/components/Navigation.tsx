@@ -27,45 +27,47 @@ export function Navigation({ currentView, onViewChange, onOpenSettings }: Naviga
   ]
 
   return (
-    <nav className="flex items-center gap-1 md:gap-2">
+    <nav className="flex items-center justify-center gap-0.5 sm:gap-1">
       {navItems.map((item) => (
         <button
           key={item.id}
           onClick={() => onViewChange(item.id)}
           className={cn(
-            'flex items-center gap-2 px-2 py-2 md:px-3 md:py-2 rounded-lg transition-colors',
+            'flex items-center justify-center gap-1.5 px-2 py-2 sm:px-2.5 sm:py-2 rounded-lg transition-all',
             'hover:bg-accent hover:text-accent-foreground',
-            'min-h-[44px] min-w-[44px]', // Minimum touch target size
+            'min-h-[40px] min-w-[40px] sm:min-h-[44px] sm:min-w-[44px]',
             currentView === item.id
-              ? 'bg-primary text-primary-foreground'
+              ? 'bg-primary text-primary-foreground shadow-sm'
               : 'text-muted-foreground'
           )}
           aria-label={item.label}
           title={item.label}
         >
-          <item.icon size={20} />
-          <span className="hidden md:inline text-sm font-medium">
+          <item.icon size={18} className="sm:w-5 sm:h-5" />
+          <span className="hidden lg:inline text-xs font-medium">
             {item.label}
           </span>
         </button>
       ))}
 
+      <div className="w-px h-6 bg-border mx-1 hidden sm:block" />
+
       <button
         onClick={toggleTheme}
-        className="ml-1 md:ml-2 p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors min-h-[44px] min-w-[44px]"
+        className="flex items-center justify-center p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors min-h-[40px] min-w-[40px] sm:min-h-[44px] sm:min-w-[44px] text-muted-foreground"
         aria-label="Toggle theme"
         title="Toggle theme"
       >
-        {actualTheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+        {actualTheme === 'dark' ? <Sun size={18} className="sm:w-5 sm:h-5" /> : <Moon size={18} className="sm:w-5 sm:h-5" />}
       </button>
 
       <button
         onClick={onOpenSettings}
-        className="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors min-h-[44px] min-w-[44px]"
+        className="flex items-center justify-center p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors min-h-[40px] min-w-[40px] sm:min-h-[44px] sm:min-w-[44px] text-muted-foreground"
         aria-label="Settings"
         title="Settings (Ctrl+,)"
       >
-        <Settings size={20} />
+        <Settings size={18} className="sm:w-5 sm:h-5" />
       </button>
     </nav>
   )

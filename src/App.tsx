@@ -136,36 +136,42 @@ function App() {
     <div className={cn('min-h-screen transition-colors duration-200', theme)}>
       <div className="flex flex-col h-screen">
         {/* Header - Sticky Navigation */}
-        <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 py-3 flex items-center justify-between shadow-sm">
-          <h1 className="text-xl font-bold text-foreground">Echo Flow</h1>
-          <Navigation
-            currentView={currentView}
-            onViewChange={setCurrentView}
-            onOpenSettings={() => setShowSettings(true)}
-          />
+        <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-center gap-3 sm:gap-4 max-w-7xl">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <h1 className="text-base sm:text-lg md:text-xl font-bold text-foreground whitespace-nowrap">Echo Flow</h1>
+            </div>
+            <div className="flex-1 flex justify-center">
+              <Navigation
+                currentView={currentView}
+                onViewChange={setCurrentView}
+                onOpenSettings={() => setShowSettings(true)}
+              />
+            </div>
+          </div>
         </header>
 
         {/* Main Content */}
         <main className="flex-1 overflow-auto">
           {currentView === 'home' && (
-            <div className="container mx-auto px-4 py-8 max-w-2xl">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold mb-2">Capture Your Thoughts</h2>
-                <p className="text-muted-foreground">
+            <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-2xl">
+              <div className="text-center mb-6 sm:mb-8">
+                <h2 className="text-2xl sm:text-3xl font-bold mb-2">Capture Your Thoughts</h2>
+                <p className="text-sm sm:text-base text-muted-foreground px-2">
                   Voice record or use AI Chat to quickly capture tasks, notes, and ideas
                 </p>
               </div>
               <VoiceRecorder />
 
               {/* AI Chat Link */}
-              <div className="mt-8 p-6 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20">
-                <h3 className="text-lg font-semibold mb-2">Need AI assistance?</h3>
-                <p className="text-sm text-muted-foreground mb-4">
+              <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl border border-primary/20">
+                <h3 className="text-base sm:text-lg font-semibold mb-2">Need AI assistance?</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
                   Chat with AI to organize tasks, get insights, and manage your day
                 </p>
                 <button
                   onClick={() => setCurrentView('aiinsights')}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                  className="w-full sm:w-auto px-4 py-2 sm:py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
                 >
                   Open AI Chat
                 </button>
