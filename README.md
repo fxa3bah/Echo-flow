@@ -7,6 +7,15 @@ A fast, intuitive voice-first productivity web application that combines quick v
 
 ## 🎉 What's New in v2.2
 
+### 📱 Progressive Web App (PWA) (NEW!)
+- **Install on Any Device**: Add to home screen on iPhone, Android, Windows, Mac
+- **Works Offline**: Full offline support with service worker caching
+- **Native App Experience**: Runs in standalone mode without browser chrome
+- **App Shortcuts**: Quick actions from home screen (Android long-press)
+- **Beautiful Icons**: Custom gradient audio wave icon across all platforms
+- **Auto-Update**: Background updates when new version available
+- **Cross-Platform**: iOS 11.3+, Android 5+, Windows, Mac, Linux
+
 ### ☁️ Supabase Cloud Sync (NEW!)
 - **Real-Time Sync**: Automatic sync across all your devices instantly
 - **Email/Password Auth**: Simple authentication with no OAuth setup required
@@ -156,11 +165,13 @@ A fast, intuitive voice-first productivity web application that combines quick v
 - **Diary Content Check**: Avoids duplicate appends to daily notes
 
 ### ⚡ Additional Features
+- **Progressive Web App**: Install on any device, works offline, native app experience
 - **Dark/Light Mode**: System-aware theme with manual toggle
-- **Offline Support**: PWA with service workers
+- **Offline Support**: Service workers cache all assets, works without internet
 - **Keyboard Shortcuts**: Power user navigation (Ctrl+R, Ctrl+D, Ctrl+A, etc.)
 - **Responsive Design**: Mobile-first with sticky navigation
 - **Accessibility**: 44px touch targets, screen reader support
+- **App Shortcuts**: Quick actions from home screen (Android)
 
 ## 🚀 Getting Started
 
@@ -257,6 +268,35 @@ npm run dev
 ```
 
 5. Open your browser to `http://localhost:5173`
+
+### Installing as PWA (Progressive Web App)
+
+Echo Flow can be installed on any device as a native app!
+
+#### iPhone/iPad (iOS)
+1. Open the app in Safari
+2. Tap the Share button (box with arrow)
+3. Scroll down → "Add to Home Screen"
+4. Tap "Add"
+
+#### Android
+1. Open the app in Chrome
+2. Tap menu (⋮) → "Install app"
+3. Confirm installation
+
+#### Windows/Mac Desktop
+1. Open app in Chrome/Edge
+2. Click install icon (⊕) in address bar
+3. Click "Install"
+
+**Benefits of Installing:**
+- Works offline
+- Faster loading (cached assets)
+- No browser chrome (full screen)
+- Quick access from home screen/desktop
+- Background updates
+
+See [PWA_SETUP.md](PWA_SETUP.md) for more details.
 
 ### Building for Production
 
