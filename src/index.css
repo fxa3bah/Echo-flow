@@ -68,3 +68,56 @@
     scrollbar-width: none;
   }
 }
+
+/* Responsive improvements for mobile, tablets, and foldables */
+@media (min-width: 768px) and (max-width: 1024px) {
+  /* Tablets and foldables (Samsung Fold 7: 884px unfolded) */
+  .container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 600px) and (max-width: 900px) and (orientation: portrait) {
+  /* Foldables in portrait mode */
+  .container {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1400px) and (orientation: landscape) {
+  /* Foldables in landscape mode (wide screen) */
+  .container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+    max-width: 80rem;
+  }
+}
+
+@media (max-width: 375px) {
+  /* Small mobile devices */
+  html {
+    font-size: 14px;
+  }
+}
+
+/* Touch-friendly minimum sizes for mobile */
+@media (max-width: 768px) {
+  button:not(.no-min-size),
+  a:not(.no-min-size),
+  input[type="checkbox"]:not(.no-min-size) {
+    min-height: 44px;
+  }
+
+  /* Ensure text inputs are easier to tap */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  textarea {
+    min-height: 44px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}

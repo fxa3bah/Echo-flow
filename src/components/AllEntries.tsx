@@ -374,8 +374,8 @@ export function AllEntries() {
         </div>
       )}
 
-      {/* Table */}
-      <div className="border border-border rounded-lg overflow-hidden">
+      {/* Desktop Table - Hidden on mobile */}
+      <div className="hidden lg:block border border-border rounded-lg overflow-hidden">
         <table className="w-full table-auto">
           <thead className="bg-muted/50 border-b border-border">
             <tr>
@@ -613,6 +613,116 @@ export function AllEntries() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Card View - Shown on mobile only */}
+      <div className="lg:hidden space-y-3">
+        {sortedEntries.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground border border-border rounded-lg">
+            {searchQuery ? 'No entries match your search' : 'No entries yet. Start recording or add notes!'}
+          </div>
+        ) : (
+          sortedEntries.map((entry) => (
+            <div
+              key={entry.id}
+              className={cn(
+                'border border-border rounded-lg overflow-hidden bg-card',
+                selectedIds.has(entry.id) && 'ring-2 ring-primary'
+              )}
+            >
+              {/* Card Header */}
+              <div className="flex items-start gap-3 p-4 pb-3 border-b border-border bg-muted/30">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(entry.id)}
+                  onChange={() => toggleSelectOne(entry.id)}
+                  className="mt-1 flex-shrink-0"
+                  aria-label={`Select entry ${entry.id}`}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <span className={cn('px-2 py-1 rounded text-xs font-medium', getTypeColor(entry.type))}>
+                      {entry.type}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {getSourceBadge(entry.source)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <CalendarIcon className="w-3 h-3" />
+                    {(() => {
+                      const entryDate = ensureDate(entry.date)
+                      return entryDate ? (
+                        <span>
+                          {entryDate.toLocaleDateString()} {entryDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      ) : (
+                        <span>No date</span>
+                      )
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Card Content */}
+              <div className="p-4">
+                <div className="flex items-start gap-2 mb-3">
+                  {(entry.type === 'todo' || entry.type === 'reminder') && (
+                    <button
+                      onClick={() => handleToggleComplete(entry.id, entry.completed || false)}
+                      className="mt-0.5 flex-shrink-0"
+                    >
+                      {entry.completed ? (
+                        <CheckSquare className="w-5 h-5 text-green-600" />
+                      ) : (
+                        <Square className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </button>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    {entry.title && (
+                      <div className="font-medium mb-1">{entry.title}</div>
+                    )}
+                    <p className={cn('text-sm', entry.completed && 'line-through text-muted-foreground')}>
+                      {ensureString(entry.content)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Tags */}
+                {(entry.tags || []).length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {(entry.tags || []).map((tag, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted rounded text-xs"
+                      >
+                        <TagIcon className="w-3 h-3" />
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 pt-3 border-t border-border">
+                  <button
+                    onClick={() => startInlineEdit(entry)}
+                    className="flex-1 px-3 py-2 text-sm bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(entry.id)}
+                    className="px-3 py-2 text-sm bg-destructive/10 text-destructive rounded hover:bg-destructive/20 transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Summary */}
