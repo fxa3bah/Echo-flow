@@ -297,6 +297,8 @@ export async function uploadToSupabase(): Promise<{ success: boolean; error?: st
     // Store it in the JSONB data field instead of as a column
     const { version, ...dataToStore } = exportData
 
+    console.log('[Supabase Upload] Uploading data without version field')
+
     // Upsert to user_data table
     const { error } = await client
       .from('user_data')
@@ -309,9 +311,10 @@ export async function uploadToSupabase(): Promise<{ success: boolean; error?: st
       })
 
     if (error) {
+      console.error('[Supabase Upload] Error:', error)
       return {
         success: false,
-        error: error.message,
+        error: `Supabase upload failed: ${error.message}. Please check your table schema matches the setup guide in the code.`,
       }
     }
 
@@ -378,8 +381,14 @@ export async function downloadFromSupabase(): Promise<{
       }
     }
 
+    // Re-add the version field for import compatibility
+    const dataWithVersion = {
+      version: '1.0',
+      ...data.data
+    }
+
     // Import data
-    const jsonData = JSON.stringify(data.data)
+    const jsonData = JSON.stringify(dataWithVersion)
     const result = await importData(jsonData)
 
     if (result.success) {
