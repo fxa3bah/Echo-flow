@@ -183,14 +183,14 @@ export function VoiceRecorder() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Online/Offline Mode Toggle */}
       {speechRecognition.isSupported && (
-        <div className="flex items-center justify-center gap-4 p-4 bg-muted/50 rounded-lg">
-          <span className="text-sm font-medium text-muted-foreground">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 p-3 sm:p-4 bg-muted/50 rounded-lg">
+          <span className="text-xs sm:text-sm font-medium text-muted-foreground">
             Mode:
           </span>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             <button
               onClick={() => {
                 setUseOnlineMode(false)
@@ -199,7 +199,7 @@ export function VoiceRecorder() {
               }}
               disabled={isRecording}
               className={cn(
-                'px-4 py-2 rounded-lg font-medium transition-all text-sm flex items-center gap-2',
+                'flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium transition-all text-xs sm:text-sm flex items-center justify-center gap-2 min-h-[44px]',
                 !useOnlineMode
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
@@ -207,7 +207,7 @@ export function VoiceRecorder() {
               )}
             >
               <WifiOff className="w-4 h-4" />
-              Offline
+              <span>Offline</span>
             </button>
             <button
               onClick={() => {
@@ -217,7 +217,7 @@ export function VoiceRecorder() {
               }}
               disabled={isRecording}
               className={cn(
-                'px-4 py-2 rounded-lg font-medium transition-all text-sm flex items-center gap-2',
+                'flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium transition-all text-xs sm:text-sm flex items-center justify-center gap-2 min-h-[44px]',
                 useOnlineMode
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
@@ -225,14 +225,14 @@ export function VoiceRecorder() {
               )}
             >
               <Wifi className="w-4 h-4" />
-              Online {groqConfigured && '(Groq)'}
+              <span>Online {groqConfigured && '(Groq)'}</span>
             </button>
           </div>
         </div>
       )}
 
       {/* Mode Info */}
-      <div className="text-center text-xs text-muted-foreground">
+      <div className="text-center text-xs sm:text-sm text-muted-foreground px-2">
         {useOnlineMode ? (
           <span>✨ Online: Lightning-fast, high-accuracy AI transcription (Groq Whisper)</span>
         ) : (
@@ -249,13 +249,13 @@ export function VoiceRecorder() {
       )}
 
       {/* Recording Button */}
-      <div className="space-y-4">
-        <div className="flex justify-center">
+      <div className="space-y-4 py-4 sm:py-6">
+        <div className="flex justify-center items-center">
           <button
             onClick={handleToggleRecording}
             disabled={isTranscribing}
             className={cn(
-              'relative w-32 h-32 rounded-full flex items-center justify-center',
+              'relative w-28 h-28 sm:w-32 sm:h-32 rounded-full flex items-center justify-center',
               'transition-all duration-300 transform hover:scale-105',
               'focus:outline-none focus:ring-4 focus:ring-primary/50',
               'disabled:opacity-50 disabled:cursor-not-allowed',
@@ -266,19 +266,19 @@ export function VoiceRecorder() {
             aria-label={isRecording ? 'Stop recording' : 'Start recording'}
           >
             {isTranscribing ? (
-              <Loader2 size={48} className="animate-spin" />
+              <Loader2 size={40} className="sm:w-12 sm:h-12 animate-spin" />
             ) : isRecording ? (
-              <MicOff size={48} />
+              <MicOff size={40} className="sm:w-12 sm:h-12" />
             ) : (
-              <Mic size={48} />
+              <Mic size={40} className="sm:w-12 sm:h-12" />
             )}
             {isRecording && !isTranscribing && (
-              <span className="absolute -bottom-8 text-sm font-medium">
+              <span className="absolute -bottom-8 text-xs sm:text-sm font-medium whitespace-nowrap">
                 Recording...
               </span>
             )}
             {isTranscribing && (
-              <span className="absolute -bottom-8 text-sm font-medium">
+              <span className="absolute -bottom-8 text-xs sm:text-sm font-medium whitespace-nowrap">
                 Transcribing...
               </span>
             )}
@@ -297,25 +297,25 @@ export function VoiceRecorder() {
       {/* Transcript Display */}
       {transcript && (
         <div className="space-y-4">
-          <div className="p-4 bg-muted rounded-lg min-h-32 max-h-64 overflow-y-auto">
-            <p className="text-foreground whitespace-pre-wrap">
+          <div className="p-3 sm:p-4 bg-muted rounded-lg min-h-32 max-h-64 overflow-y-auto">
+            <p className="text-sm sm:text-base text-foreground whitespace-pre-wrap">
               {transcript}
             </p>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 justify-center">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center items-stretch sm:items-center px-2 sm:px-0">
             <button
               onClick={handleSave}
               disabled={isSaving || isRecording || isTranscribing}
               className={cn(
-                'flex items-center gap-2 px-6 py-3 rounded-lg font-medium',
-                'transition-colors',
+                'flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium min-h-[44px]',
+                'transition-colors text-sm sm:text-base',
                 'bg-primary text-primary-foreground hover:bg-primary/90',
                 'disabled:opacity-50 disabled:cursor-not-allowed'
               )}
             >
-              <Save size={20} />
+              <Save size={18} className="sm:w-5 sm:h-5" />
               {isSaving ? 'Saving...' : 'Save'}
             </button>
 
@@ -323,13 +323,13 @@ export function VoiceRecorder() {
               onClick={handleDiscard}
               disabled={isSaving || isTranscribing}
               className={cn(
-                'flex items-center gap-2 px-6 py-3 rounded-lg font-medium',
-                'transition-colors',
+                'flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium min-h-[44px]',
+                'transition-colors text-sm sm:text-base',
                 'bg-secondary text-secondary-foreground hover:bg-secondary/90',
                 'disabled:opacity-50 disabled:cursor-not-allowed'
               )}
             >
-              <X size={20} />
+              <X size={18} className="sm:w-5 sm:h-5" />
               Discard
             </button>
           </div>

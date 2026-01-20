@@ -133,42 +133,42 @@ export function CalendarView() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-6xl">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8">
         {/* Calendar */}
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold">
+          <div className="flex items-start sm:items-center justify-between mb-4 gap-2 flex-wrap">
+            <h2 className="text-lg sm:text-2xl font-bold flex-1 min-w-0">
               {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </h2>
-            <div className="flex gap-2">
+            <div className="flex gap-1.5 sm:gap-2 flex-shrink-0">
               <button
                 onClick={goToToday}
-                className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                className="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors min-h-[36px] sm:min-h-[40px]"
               >
                 Today
               </button>
               <button
                 onClick={goToPreviousMonth}
-                className="p-1.5 hover:bg-accent rounded transition-colors"
+                className="p-1.5 hover:bg-accent rounded transition-colors min-h-[36px] min-w-[36px] sm:min-h-[40px] sm:min-w-[40px] flex items-center justify-center"
                 aria-label="Previous month"
               >
-                <ChevronLeft size={20} />
+                <ChevronLeft size={18} className="sm:w-5 sm:h-5" />
               </button>
               <button
                 onClick={goToNextMonth}
-                className="p-1.5 hover:bg-accent rounded transition-colors"
+                className="p-1.5 hover:bg-accent rounded transition-colors min-h-[36px] min-w-[36px] sm:min-h-[40px] sm:min-w-[40px] flex items-center justify-center"
                 aria-label="Next month"
               >
-                <ChevronRight size={20} />
+                <ChevronRight size={18} className="sm:w-5 sm:h-5" />
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {/* Week day headers */}
             {weekDays.map((day) => (
-              <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
+              <div key={day} className="text-center text-xs sm:text-sm font-medium text-muted-foreground py-1 sm:py-2">
                 {day}
               </div>
             ))}
@@ -188,13 +188,13 @@ export function CalendarView() {
                   key={day.toISOString()}
                   onClick={() => setSelectedDate(day)}
                   className={cn(
-                    'aspect-square flex flex-col items-center justify-center rounded-lg transition-colors relative',
+                    'aspect-square flex flex-col items-center justify-center rounded-lg transition-colors relative min-h-[44px]',
                     'hover:bg-accent',
                     isSelected && 'bg-primary text-primary-foreground hover:bg-primary/90',
                     isToday && !isSelected && 'ring-2 ring-primary'
                   )}
                 >
-                  <span className="text-sm font-medium">{day.getDate()}</span>
+                  <span className="text-xs sm:text-sm font-medium">{day.getDate()}</span>
                   {hasEntries && (
                     <div className="absolute bottom-1 w-1 h-1 rounded-full bg-current" />
                   )}
@@ -206,17 +206,17 @@ export function CalendarView() {
 
         {/* Daily View */}
         <div>
-          <h3 className="text-2xl font-bold mb-4">{formatDate(selectedDate)}</h3>
+          <h3 className="text-lg sm:text-2xl font-bold mb-3 sm:mb-4">{formatDate(selectedDate)}</h3>
 
-          <div className="bg-card border border-border rounded-lg p-4 mb-6 space-y-3">
-            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          <div className="bg-card border border-border rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 space-y-3">
+            <h4 className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wide">
               Add Note
             </h4>
             <input
               value={newNoteTitle}
               onChange={(e) => setNewNoteTitle(e.target.value)}
               placeholder="Note title (optional)"
-              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
             />
             <textarea
               value={newNoteContent}
@@ -228,7 +228,7 @@ export function CalendarView() {
               onClick={handleAddNote}
               disabled={!newNoteContent.trim()}
               className={cn(
-                'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm',
+                'w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm min-h-[44px]',
                 'bg-primary text-primary-foreground hover:bg-primary/90 transition-colors',
                 'disabled:opacity-50 disabled:cursor-not-allowed'
               )}

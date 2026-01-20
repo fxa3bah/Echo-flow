@@ -86,23 +86,25 @@ export function FocusView() {
   return (
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-7xl">
       <div className="mb-4 sm:mb-6">
-        <div className="flex items-center justify-between gap-3 mb-2">
-          <h1 className="text-2xl sm:text-3xl font-bold">Focus View</h1>
+        <div className="flex items-start sm:items-center justify-between gap-3 mb-2 flex-wrap">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold">Focus View</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+              AI-organized tasks by time horizon
+            </p>
+          </div>
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
             className={cn(
-              'flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all',
+              'flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all min-h-[44px] whitespace-nowrap',
               isRefreshing && 'opacity-50 cursor-not-allowed'
             )}
           >
-            <RefreshCw className={cn('w-3.5 h-3.5 sm:w-4 sm:h-4', isRefreshing && 'animate-spin')} />
+            <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
             <span className="hidden sm:inline">Refresh</span>
           </button>
         </div>
-        <p className="text-sm text-muted-foreground">
-          AI-organized tasks by time horizon
-        </p>
       </div>
 
       <div className="space-y-4 sm:space-y-6">
@@ -114,19 +116,19 @@ export function FocusView() {
             <div
               key={horizon.id}
               className={cn(
-                'rounded-lg border p-4 sm:p-6 transition-all',
+                'rounded-lg border p-3 sm:p-6 transition-all',
                 horizon.color
               )}
             >
-              <div className="flex items-center justify-between gap-3 mb-3 sm:mb-4">
-                <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex items-start sm:items-center justify-between gap-3 mb-3 sm:mb-4 flex-wrap">
+                <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                   <Icon className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
-                  <div>
-                    <h2 className="text-lg sm:text-xl font-semibold">{horizon.title}</h2>
+                  <div className="min-w-0">
+                    <h2 className="text-base sm:text-xl font-semibold">{horizon.title}</h2>
                     <p className="text-xs sm:text-sm text-muted-foreground">{horizon.description}</p>
                   </div>
                 </div>
-                <div className="text-xs sm:text-sm font-medium px-2 sm:px-3 py-1 bg-background rounded-full whitespace-nowrap">
+                <div className="text-xs sm:text-sm font-medium px-2 sm:px-3 py-1 bg-background rounded-full whitespace-nowrap flex-shrink-0">
                   {sectionEntries.length} {sectionEntries.length === 1 ? 'task' : 'tasks'}
                 </div>
               </div>

@@ -320,22 +320,22 @@ export function AllEntries() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">All Entries</h1>
-        <p className="text-muted-foreground">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">All Entries</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
           All your data in one place - {sortedEntries.length} total entries
         </p>
       </div>
 
       {/* Search */}
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <input
           type="text"
           placeholder="Search content or tags..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full px-3 sm:px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary text-sm sm:text-base min-h-[44px]"
         />
       </div>
 
@@ -616,9 +616,9 @@ export function AllEntries() {
       </div>
 
       {/* Mobile Card View - Shown on mobile only */}
-      <div className="lg:hidden space-y-3">
+      <div className="lg:hidden space-y-2 sm:space-y-3">
         {sortedEntries.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground border border-border rounded-lg">
+          <div className="p-6 sm:p-8 text-center text-sm sm:text-base text-muted-foreground border border-border rounded-lg">
             {searchQuery ? 'No entries match your search' : 'No entries yet. Start recording or add notes!'}
           </div>
         ) : (
@@ -631,29 +631,29 @@ export function AllEntries() {
               )}
             >
               {/* Card Header */}
-              <div className="flex items-start gap-3 p-4 pb-3 border-b border-border bg-muted/30">
+              <div className="flex items-start gap-2 sm:gap-3 p-3 sm:p-4 pb-2 sm:pb-3 border-b border-border bg-muted/30">
                 <input
                   type="checkbox"
                   checked={selectedIds.has(entry.id)}
                   onChange={() => toggleSelectOne(entry.id)}
-                  className="mt-1 flex-shrink-0"
+                  className="mt-1 flex-shrink-0 min-h-[20px] min-w-[20px]"
                   aria-label={`Select entry ${entry.id}`}
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span className={cn('px-2 py-1 rounded text-xs font-medium', getTypeColor(entry.type))}>
+                  <div className="flex items-center gap-1.5 sm:gap-2 mb-2 flex-wrap">
+                    <span className={cn('px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-xs font-medium', getTypeColor(entry.type))}>
                       {entry.type}
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-[10px] sm:text-xs text-muted-foreground">
                       {getSourceBadge(entry.source)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <CalendarIcon className="w-3 h-3" />
+                  <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-muted-foreground">
+                    <CalendarIcon className="w-3 h-3 flex-shrink-0" />
                     {(() => {
                       const entryDate = ensureDate(entry.date)
                       return entryDate ? (
-                        <span>
+                        <span className="truncate">
                           {entryDate.toLocaleDateString()} {entryDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       ) : (
@@ -665,12 +665,12 @@ export function AllEntries() {
               </div>
 
               {/* Card Content */}
-              <div className="p-4">
-                <div className="flex items-start gap-2 mb-3">
+              <div className="p-3 sm:p-4">
+                <div className="flex items-start gap-2 mb-2 sm:mb-3">
                   {(entry.type === 'todo' || entry.type === 'reminder') && (
                     <button
                       onClick={() => handleToggleComplete(entry.id, entry.completed || false)}
-                      className="mt-0.5 flex-shrink-0"
+                      className="mt-0.5 flex-shrink-0 min-h-[44px] min-w-[44px] flex items-start justify-center"
                     >
                       {entry.completed ? (
                         <CheckSquare className="w-5 h-5 text-green-600" />
@@ -681,9 +681,9 @@ export function AllEntries() {
                   )}
                   <div className="flex-1 min-w-0">
                     {entry.title && (
-                      <div className="font-medium mb-1">{entry.title}</div>
+                      <div className="font-medium text-sm sm:text-base mb-1">{entry.title}</div>
                     )}
-                    <p className={cn('text-sm', entry.completed && 'line-through text-muted-foreground')}>
+                    <p className={cn('text-xs sm:text-sm leading-relaxed', entry.completed && 'line-through text-muted-foreground')}>
                       {ensureString(entry.content)}
                     </p>
                   </div>
@@ -691,13 +691,13 @@ export function AllEntries() {
 
                 {/* Tags */}
                 {(entry.tags || []).length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-3">
+                  <div className="flex flex-wrap gap-1 mb-2 sm:mb-3">
                     {(entry.tags || []).map((tag, i) => (
                       <span
                         key={i}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted rounded text-xs"
+                        className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 bg-muted rounded text-[10px] sm:text-xs"
                       >
-                        <TagIcon className="w-3 h-3" />
+                        <TagIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                         {tag}
                       </span>
                     ))}
@@ -705,16 +705,16 @@ export function AllEntries() {
                 )}
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 pt-3 border-t border-border">
+                <div className="flex items-center gap-2 pt-2 sm:pt-3 border-t border-border">
                   <button
                     onClick={() => startInlineEdit(entry)}
-                    className="flex-1 px-3 py-2 text-sm bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+                    className="flex-1 px-3 py-2 text-xs sm:text-sm bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors min-h-[40px] sm:min-h-[44px]"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(entry.id)}
-                    className="px-3 py-2 text-sm bg-destructive/10 text-destructive rounded hover:bg-destructive/20 transition-colors"
+                    className="px-3 py-2 text-xs sm:text-sm bg-destructive/10 text-destructive rounded hover:bg-destructive/20 transition-colors min-h-[40px] sm:min-h-[44px]"
                   >
                     Delete
                   </button>
