@@ -281,12 +281,12 @@ export function DiaryEditor() {
   }, [content])
 
   return (
-    <div className="container mx-auto px-4 py-4 max-w-5xl">
+    <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 max-w-5xl h-[calc(100vh-6rem)] flex flex-col">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-3 border-b border-border">
+      <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 mb-3 sm:mb-4 pb-2 sm:pb-3 border-b border-border flex-shrink-0">
         <div className="space-y-0.5">
-          <h2 className="text-2xl font-bold">{formatDate(selectedDate)}</h2>
-          <p className="text-xs text-muted-foreground">
+          <h2 className="text-xl sm:text-2xl font-bold">{formatDate(selectedDate)}</h2>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
             {isSaving
               ? 'Saving...'
               : lastSaved
@@ -295,10 +295,10 @@ export function DiaryEditor() {
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-1 sm:gap-2">
           <button
             onClick={goToToday}
-            className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
           >
             Today
           </button>
@@ -319,14 +319,16 @@ export function DiaryEditor() {
         </div>
       </div>
 
-      {/* Transcriptions Section */}
-      {dayTranscriptions && dayTranscriptions.length > 0 && (
-        <div className="mb-4">
-          <button
-            onClick={() => setTranscriptionsExpanded(!transcriptionsExpanded)}
-            className="w-full flex items-center justify-between mb-3 p-2.5 hover:bg-accent rounded-lg transition-colors"
-          >
-            <h4 className="text-sm font-semibold text-foreground">
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto space-y-3 sm:space-y-4">
+        {/* Transcriptions Section */}
+        {dayTranscriptions && dayTranscriptions.length > 0 && (
+          <div>
+            <button
+              onClick={() => setTranscriptionsExpanded(!transcriptionsExpanded)}
+              className="w-full flex items-center justify-between mb-2 p-2 hover:bg-accent rounded-lg transition-colors"
+            >
+              <h4 className="text-xs sm:text-sm font-semibold text-foreground">
               Captured Notes ({dayTranscriptions.length})
             </h4>
             {transcriptionsExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -356,20 +358,20 @@ export function DiaryEditor() {
         </div>
       )}
 
-      {/* Tasks & Reminders Section */}
-      {dayEntries && dayEntries.length > 0 && (
-        <div className="mb-4">
-          <button
-            onClick={() => setTasksExpanded(!tasksExpanded)}
-            className="w-full flex items-center justify-between mb-3 p-2.5 hover:bg-accent rounded-lg transition-colors"
-          >
-            <h4 className="text-sm font-semibold text-foreground">
-              Tasks & Reminders ({dayEntries.filter((e) => !e.completed).length} active, {dayEntries.filter((e) => e.completed).length} done)
-            </h4>
-            {tasksExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-          </button>
-          {tasksExpanded && (
-            <div className="space-y-2.5">
+        {/* Tasks & Reminders Section */}
+        {dayEntries && dayEntries.length > 0 && (
+          <div>
+            <button
+              onClick={() => setTasksExpanded(!tasksExpanded)}
+              className="w-full flex items-center justify-between mb-2 p-2 hover:bg-accent rounded-lg transition-colors"
+            >
+              <h4 className="text-xs sm:text-sm font-semibold text-foreground">
+                Tasks & Reminders ({dayEntries.filter((e) => !e.completed).length} active, {dayEntries.filter((e) => e.completed).length} done)
+              </h4>
+              {tasksExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+            {tasksExpanded && (
+              <div className="space-y-2">
               {/* Show incomplete tasks first */}
               {dayEntries
                 .filter((e) => !e.completed)
@@ -436,20 +438,20 @@ export function DiaryEditor() {
                     </div>
                   </div>
                 ))}
-            </div>
-          )}
-        </div>
-      )}
+              </div>
+            )}
+          </div>
+        )}
 
-      {/* Notes Section */}
-      <div className="space-y-3 relative">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => setNotesExpanded(!notesExpanded)}
-            className="flex items-center gap-2 px-2.5 py-2 hover:bg-accent rounded-lg transition-colors"
-          >
-            <h4 className="text-sm font-semibold text-foreground">
-              Notes
+        {/* Notes Section */}
+        <div className="space-y-2 relative flex-1 flex flex-col">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setNotesExpanded(!notesExpanded)}
+              className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded-lg transition-colors"
+            >
+              <h4 className="text-xs sm:text-sm font-semibold text-foreground">
+                Notes
             </h4>
             {notesExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
           </button>
@@ -474,10 +476,10 @@ export function DiaryEditor() {
         </div>
         {notesExpanded && (
           <>
-            <div className="border border-border rounded-xl bg-card relative shadow-sm">
+            <div className="border border-border rounded-xl bg-card relative shadow-sm flex-1">
               {isPreviewMode ? (
                 <div
-                  className="w-full p-5 min-h-[240px] prose prose-sm dark:prose-invert max-w-none"
+                  className="w-full p-4 sm:p-5 min-h-[40vh] sm:min-h-[30vh] lg:min-h-[240px] prose prose-sm dark:prose-invert max-w-none"
                   dangerouslySetInnerHTML={{ __html: renderedHtml }}
                 />
               ) : (
@@ -487,7 +489,7 @@ export function DiaryEditor() {
                     value={content}
                     onChange={handleContentChange}
                     placeholder="Start typing... (Markdown supported)"
-                    className="w-full p-5 bg-transparent border-none focus:outline-none resize-none min-h-[240px] font-sans text-sm leading-relaxed"
+                    className="w-full p-4 sm:p-5 bg-transparent border-none focus:outline-none resize-none min-h-[40vh] sm:min-h-[30vh] lg:min-h-[240px] font-sans text-sm leading-relaxed"
                     style={{ overflow: 'hidden' }}
                   />
 
@@ -503,13 +505,14 @@ export function DiaryEditor() {
                 </>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
               {isPreviewMode
                 ? 'Viewing formatted text. Click Edit to modify.'
                 : 'Markdown is supported. Type / for commands. Dates, todos, and reminders are auto-detected.'}
             </p>
           </>
         )}
+        </div>
       </div>
     </div>
   )
