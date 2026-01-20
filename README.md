@@ -359,6 +359,53 @@ Toggle between modes manually using the mode selector in the voice recorder.
 - Check browser console for detailed error messages
 - Verify you haven't exceeded the free tier limits (unlikely)
 
+### Supabase Sync Error: "record 'new' has no field 'version'"
+
+This error means your Supabase table schema doesn't match the expected format. To fix:
+
+1. **Go to Supabase SQL Editor** and run this command to check your schema:
+   ```sql
+   \d user_data
+   ```
+
+2. **If the table has a `version` column**, drop it:
+   ```sql
+   ALTER TABLE user_data DROP COLUMN IF EXISTS version;
+   ```
+
+3. **Verify your table only has these columns**:
+   - `id` (UUID, primary key)
+   - `user_id` (UUID, foreign key to auth.users)
+   - `data` (JSONB) - this stores ALL your app data
+   - `created_at` (timestamp)
+   - `updated_at` (timestamp)
+
+4. **If the table structure is completely wrong**, drop and recreate it:
+   ```sql
+   DROP TABLE IF EXISTS user_data;
+
+   CREATE TABLE user_data (
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+     data JSONB NOT NULL,
+     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+     UNIQUE(user_id)
+   );
+
+   ALTER TABLE user_data ENABLE ROW LEVEL SECURITY;
+
+   CREATE POLICY "Users can CRUD their own data"
+     ON user_data
+     FOR ALL
+     USING (auth.uid() = user_id)
+     WITH CHECK (auth.uid() = user_id);
+
+   CREATE INDEX idx_user_data_user_id ON user_data(user_id);
+   ```
+
+5. **Clear old data** and try syncing again
+
 ## 🏗️ Architecture
 
 ### Tech Stack
