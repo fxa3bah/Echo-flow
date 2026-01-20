@@ -2,8 +2,39 @@
 
 A fast, intuitive voice-first productivity web application that combines quick voice-to-text journaling, task management, and calendar organization with AI-powered insights.
 
-![Echo Flow](https://img.shields.io/badge/version-2.1.0-blue)
+![Echo Flow](https://img.shields.io/badge/version-2.2.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
+
+## 🎉 What's New in v2.2
+
+### ☁️ Supabase Cloud Sync (NEW!)
+- **Real-Time Sync**: Automatic sync across all your devices instantly
+- **Email/Password Auth**: Simple authentication with no OAuth setup required
+- **Manual Controls**: "Sync Now" and "Pull Latest" buttons for full control
+- **Conflict Resolution**: Intelligent timestamp-based sync resolution
+- **Background Sync**: Changes automatically synced every 5 minutes
+- **Free Tier**: Uses Supabase free tier (500MB database, 1GB file storage)
+- **Setup Guide**: Quick 5-minute setup with SQL schema included in code
+
+### 🎯 Focus View Improvements
+- **Refresh Button**: Manual refresh to ensure all items are displayed
+- **Better Organization**: Items organized by time horizon (Do Now, This Week, Later)
+- **Enhanced Visibility**: Clearer visual indicators for task priorities
+
+### 📝 Improved Diary Layout
+- **Better Spacing**: Reduced min-height for notes section (320px → 240px)
+- **Enhanced Visual Design**: Rounded corners, shadows, and better padding
+- **Improved Collapsible Sections**: More intuitive expand/collapse with better icons
+- **Cleaner Header**: Streamlined date navigation with better button styling
+- **Better Touch Targets**: Improved hover effects and interactive elements
+
+### 🤖 Smarter AI Context
+- **Focus-Aware**: AI now recognizes "Do Now" items (tasks due within 24 hours)
+- **Priority Understanding**: AI knows what's urgent vs what can wait
+- **Time Horizon Context**: Shows tasks organized by Do Now, This Week, and Later
+- **Better Task Recognition**: More accurate responses to questions about priorities
+
+---
 
 ## 🎉 What's New in v2.1
 
@@ -98,7 +129,14 @@ A fast, intuitive voice-first productivity web application that combines quick v
 - **Actionable**: Mark items as complete directly in matrix
 
 ### 💾 Smart Data Management
-- **🆕 Cloud API Sync**: Direct Google Drive & OneDrive integration
+- **🆕 Supabase Cloud Sync** (v2.2): Real-time sync with email/password auth
+  - ✅ Real-time sync across all devices
+  - ✅ Manual "Sync Now" and "Pull Latest" controls
+  - ✅ Automatic background sync every 5 minutes
+  - ✅ Simple email/password authentication
+  - ✅ Conflict resolution with timestamp comparison
+  - Setup: Add Supabase credentials to `.env` file (5-minute setup)
+- **Cloud API Sync**: Direct Google Drive & OneDrive integration
   - ✅ Works on mobile browsers (solves file picker limitation!)
   - ✅ Simple "Sign in with Google/Microsoft" button
   - ✅ Auto-sync every 5 minutes
@@ -163,6 +201,55 @@ npm install
    **Note:** If you skip this step:
    - Transcription will use browser's Web Speech API (offline mode)
    - AI Chat will not be available
+
+4. **(Optional) Set up Supabase for cloud sync:**
+
+   a. Create a FREE Supabase account at [supabase.com](https://supabase.com)
+
+   b. Create a new project
+
+   c. Go to Project Settings → API and copy:
+      - Project URL
+      - `anon public` API key
+
+   d. Add to your `.env` file:
+   ```
+   VITE_SUPABASE_URL=https://your-project.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-anon-key-here
+   ```
+
+   e. Go to SQL Editor and run this schema (also in `src/services/supabaseSync.ts`):
+   ```sql
+   -- Create user_data table
+   CREATE TABLE IF NOT EXISTS user_data (
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+     data JSONB NOT NULL,
+     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+     UNIQUE(user_id)
+   );
+
+   -- Enable RLS
+   ALTER TABLE user_data ENABLE ROW LEVEL SECURITY;
+
+   -- Policy: Users can only access their own data
+   CREATE POLICY "Users can CRUD their own data"
+     ON user_data
+     FOR ALL
+     USING (auth.uid() = user_id)
+     WITH CHECK (auth.uid() = user_id);
+
+   -- Create index for faster queries
+   CREATE INDEX IF NOT EXISTS idx_user_data_user_id ON user_data(user_id);
+   ```
+
+   f. Go to Authentication → Providers → Email
+      - Disable "Confirm email" for instant signup
+
+   **Note:** If you skip this step:
+   - Cloud sync will not be available
+   - Local sync and other features will still work
 
 4. Start the development server:
 ```bash

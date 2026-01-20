@@ -171,39 +171,86 @@ export async function applyAIActions(actions: AIAction[], fallbackDate = new Dat
 export async function buildAIContextSummary(date = new Date()): Promise<string> {
   const start = startOfDay(date)
   const end = endOfDay(date)
+  const now = new Date()
 
-  // Simple! Just query unified table
-  const entries = await db.entries
+  // Get all incomplete todos and reminders for focus context
+  const allIncompleteItems = await db.entries
+    .filter((entry) => (entry.type === 'todo' || entry.type === 'reminder') && !entry.completed)
+    .toArray()
+
+  // Categorize by time horizon (matching Focus View logic)
+  const doNowItems = allIncompleteItems.filter((entry) => {
+    const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date)
+    const hoursDiff = (entryDate.getTime() - now.getTime()) / (1000 * 60 * 60)
+    return hoursDiff >= -24 && hoursDiff <= 24
+  })
+
+  const thisWeekItems = allIncompleteItems.filter((entry) => {
+    const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date)
+    const daysDiff = (entryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    return daysDiff > 1 && daysDiff <= 7
+  })
+
+  const laterItems = allIncompleteItems.filter((entry) => {
+    const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date)
+    if (!entryDate) return true
+    const daysDiff = (entryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    return daysDiff > 7
+  })
+
+  // Get today's entries for additional context
+  const todayEntries = await db.entries
     .where('date')
     .between(start, end, true, true)
     .toArray()
 
-  if (entries.length === 0) {
-    return 'Today\'s context: No entries yet'
-  }
+  const diaryEntries = todayEntries.filter(e => e.type === 'diary')
+  const sections: string[] = []
 
-  // Separate diary entries for better organization
-  const diaryEntries = entries.filter(e => e.type === 'diary')
-  const otherEntries = entries.filter(e => e.type !== 'diary')
-
-  const sections: string[] = ['Today\'s context:']
-
-  // Show diary entries first with more detail (important reflections/notes)
-  if (diaryEntries.length > 0) {
-    sections.push('\n📔 Daily Diary:')
-    diaryEntries.forEach((entry) => {
-      // Show more content for diary entries (300 chars instead of 100)
-      sections.push(`${entry.content.slice(0, 300)}${entry.content.length > 300 ? '...' : ''}`)
-    })
-  }
-
-  // Then show other entries (todos, reminders, notes, voice)
-  if (otherEntries.length > 0) {
-    sections.push('\n📋 Tasks & Notes:')
-    otherEntries.forEach((entry) => {
+  // PRIORITY: Show Do Now items first (most important for AI to know)
+  if (doNowItems.length > 0) {
+    sections.push('🔥 DO NOW (Next 24 hours) - URGENT:')
+    doNowItems.forEach((entry) => {
       const title = entry.title || entry.content.slice(0, 50)
-      const statusIcon = entry.completed ? '✅' : (entry.type === 'reminder' ? '⏰' : '•')
-      sections.push(`${statusIcon} [${entry.type}] ${title}: ${entry.content.slice(0, 100)}`)
+      const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date)
+      const timeStr = entryDate.toLocaleString()
+      sections.push(`  • [${entry.type}] ${title} (due: ${timeStr})`)
+    })
+    sections.push('')
+  }
+
+  // Show This Week items
+  if (thisWeekItems.length > 0) {
+    sections.push('📅 THIS WEEK (Next 7 days):')
+    thisWeekItems.forEach((entry) => {
+      const title = entry.title || entry.content.slice(0, 50)
+      const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date)
+      sections.push(`  • [${entry.type}] ${title} (due: ${entryDate.toLocaleDateString()})`)
+    })
+    sections.push('')
+  }
+
+  // Show Later items (backlog)
+  if (laterItems.length > 0) {
+    sections.push('🌙 LATER (Backlog):')
+    laterItems.forEach((entry) => {
+      const title = entry.title || entry.content.slice(0, 50)
+      sections.push(`  • [${entry.type}] ${title}`)
+    })
+    sections.push('')
+  }
+
+  // If no tasks at all
+  if (allIncompleteItems.length === 0) {
+    sections.push('✅ No pending tasks or reminders!')
+    sections.push('')
+  }
+
+  // Show today's diary entries for context
+  if (diaryEntries.length > 0) {
+    sections.push('📔 Today\'s Notes:')
+    diaryEntries.forEach((entry) => {
+      sections.push(`${entry.content.slice(0, 200)}${entry.content.length > 200 ? '...' : ''}`)
     })
   }
 

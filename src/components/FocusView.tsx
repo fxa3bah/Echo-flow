@@ -1,8 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { CheckCircle2, Circle, Clock, Flame, Calendar, Moon } from 'lucide-react'
+import { CheckCircle2, Circle, Clock, Flame, Calendar, Moon, RefreshCw } from 'lucide-react'
 import { db } from '../lib/db'
 import { cn, ensureDate, ensureString } from '../lib/utils'
 import type { Entry } from '../types'
+import { useState } from 'react'
 
 interface TimeHorizonSection {
   id: 'now' | 'week' | 'later'
@@ -56,11 +57,22 @@ const timeHorizons: TimeHorizonSection[] = [
 ]
 
 export function FocusView() {
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
   const entries = useLiveQuery(async () => {
     return db.entries
       .filter((entry) => (entry.type === 'todo' || entry.type === 'reminder') && !entry.completed)
       .toArray()
-  })
+  }, [refreshKey])
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    // Force a refresh of the query
+    setRefreshKey(prev => prev + 1)
+    // Small delay for visual feedback
+    setTimeout(() => setIsRefreshing(false), 500)
+  }
 
   const handleToggleComplete = async (entry: Entry) => {
     await db.entries.update(entry.id, {
@@ -74,7 +86,20 @@ export function FocusView() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Focus View</h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-3xl font-bold">Focus View</h1>
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all',
+              isRefreshing && 'opacity-50 cursor-not-allowed'
+            )}
+          >
+            <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
+            Refresh
+          </button>
+        </div>
         <p className="text-muted-foreground">
           AI-organized tasks by time horizon
         </p>
