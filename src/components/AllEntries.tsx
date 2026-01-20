@@ -320,9 +320,9 @@ export function AllEntries() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">All Entries</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">All Entries</h1>
         <p className="text-muted-foreground">
           All your data in one place - {sortedEntries.length} total entries
         </p>

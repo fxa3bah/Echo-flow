@@ -133,7 +133,7 @@ export function CalendarView() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-6xl">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Calendar */}
         <div>

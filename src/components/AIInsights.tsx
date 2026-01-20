@@ -55,7 +55,7 @@ export function AIInsights() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] max-w-4xl mx-auto p-4">
+    <div className="flex flex-col h-[calc(100vh-8rem)] max-w-4xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
       {/* Header */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
