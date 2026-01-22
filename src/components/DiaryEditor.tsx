@@ -157,7 +157,7 @@ export function DiaryEditor() {
                       {entry.title && entry.content &&
                         entry.content.toLowerCase().trim() !== entry.title.toLowerCase().trim() && (
                           <div className={cn(
-                            "text-sm font-medium text-muted-foreground/80 leading-relaxed font-black tracking-tight",
+                            "text-sm font-medium text-muted-foreground/80 leading-relaxed tracking-tight",
                             entry.completed && "line-through opacity-30"
                           )}>
                             <div dangerouslySetInnerHTML={{ __html: ensureString(entry.content) }} className="prose prose-sm dark:prose-invert max-w-none" />

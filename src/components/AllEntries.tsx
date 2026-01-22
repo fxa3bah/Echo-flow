@@ -618,7 +618,7 @@ export function AllEntries() {
                                 )}
                                 <p
                                   className={cn(
-                                    'text-sm leading-relaxed text-muted-foreground/90 font-black tracking-tight',
+                                    'text-sm leading-relaxed text-muted-foreground/90 font-medium tracking-tight',
                                     entry.completed && 'line-through opacity-50'
                                   )}
                                   onDoubleClick={() => startInlineEdit(entry)}
@@ -793,7 +793,7 @@ export function AllEntries() {
                           <div className="font-black text-lg mb-1.5 leading-tight text-foreground">{entry.title}</div>
                         )}
                         <div className={cn(
-                          'text-sm leading-relaxed font-black tracking-tight',
+                          'text-sm leading-relaxed font-medium tracking-tight',
                           entry.completed ? 'line-through text-muted-foreground/30' : 'text-muted-foreground/90'
                         )}>
                           <div dangerouslySetInnerHTML={{ __html: ensureString(entry.content) }} className="prose prose-sm dark:prose-invert max-w-none" />
