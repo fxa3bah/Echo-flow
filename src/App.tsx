@@ -251,15 +251,15 @@ const RecentEntriesList = () => {
             )}>
               {entry.type}
             </span>
-            <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-tighter">
+            <span className="text-[8px] font-bold text-muted-foreground/40 uppercase tracking-tighter">
               {new Date(entry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
           {entry.title && (
-            <div className="font-black text-sm mb-1 text-foreground">{entry.title}</div>
+            <div className="font-bold text-xs mb-0.5 text-foreground tracking-tight">{entry.title}</div>
           )}
           <div
-            className="text-xs font-medium text-muted-foreground/80 line-clamp-2 prose-sm dark:prose-invert"
+            className="text-[11px] font-normal text-muted-foreground/70 line-clamp-2 prose-sm dark:prose-invert leading-tight tracking-tight"
             dangerouslySetInnerHTML={{ __html: ensureString(entry.content) }}
           />
         </div>

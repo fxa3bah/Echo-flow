@@ -145,7 +145,7 @@ export function DiaryEditor() {
                   ) : (
                     <div className="space-y-1">
                       <div className={cn(
-                        "text-base sm:text-lg leading-tight font-black text-foreground tracking-tight",
+                        "text-sm sm:text-base leading-tight font-bold text-foreground tracking-tight",
                         entry.completed && "line-through text-muted-foreground/30"
                       )}>
                         {entry.title ? (
@@ -157,7 +157,7 @@ export function DiaryEditor() {
                       {entry.title && entry.content &&
                         entry.content.toLowerCase().trim() !== entry.title.toLowerCase().trim() && (
                           <div className={cn(
-                            "text-sm font-medium text-muted-foreground/80 leading-relaxed tracking-tight",
+                            "text-xs font-normal text-muted-foreground/70 leading-relaxed tracking-tight",
                             entry.completed && "line-through opacity-30"
                           )}>
                             <div dangerouslySetInnerHTML={{ __html: ensureString(entry.content) }} className="prose prose-sm dark:prose-invert max-w-none" />

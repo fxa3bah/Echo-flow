@@ -614,11 +614,11 @@ export function AllEntries() {
                             ) : (
                               <div className="py-1">
                                 {entry.title && (
-                                  <div className="font-black text-lg mb-1.5 text-foreground leading-tight">{entry.title}</div>
+                                  <div className="font-bold text-base mb-1 text-foreground leading-tight tracking-tight">{entry.title}</div>
                                 )}
-                                <p
+                                <div
                                   className={cn(
-                                    'text-sm leading-relaxed text-muted-foreground/90 font-medium tracking-tight',
+                                    'text-xs leading-relaxed text-muted-foreground/80 font-normal tracking-tight',
                                     entry.completed && 'line-through opacity-50'
                                   )}
                                   onDoubleClick={() => startInlineEdit(entry)}
@@ -627,7 +627,7 @@ export function AllEntries() {
                                     dangerouslySetInnerHTML={{ __html: ensureString(entry.content) }}
                                     className="prose prose-sm dark:prose-invert max-w-none"
                                   />
-                                </p>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -790,11 +790,11 @@ export function AllEntries() {
                       )}
                       <div className="flex-1 min-w-0">
                         {entry.title && (
-                          <div className="font-black text-lg mb-1.5 leading-tight text-foreground">{entry.title}</div>
+                          <div className="font-bold text-base mb-1 leading-tight text-foreground tracking-tight">{entry.title}</div>
                         )}
                         <div className={cn(
-                          'text-sm leading-relaxed font-medium tracking-tight',
-                          entry.completed ? 'line-through text-muted-foreground/30' : 'text-muted-foreground/90'
+                          'text-xs leading-relaxed font-normal tracking-tight',
+                          entry.completed ? 'line-through text-muted-foreground/30' : 'text-muted-foreground/80'
                         )}>
                           <div dangerouslySetInnerHTML={{ __html: ensureString(entry.content) }} className="prose prose-sm dark:prose-invert max-w-none" />
                         </div>
