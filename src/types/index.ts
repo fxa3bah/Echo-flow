@@ -22,6 +22,7 @@ export interface Entry {
   priority?: Priority
   completed?: boolean
   processed?: boolean
+  archived?: boolean
 
   // Voice-specific fields
   audioUrl?: string

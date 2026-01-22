@@ -172,8 +172,8 @@ Response format:
   "actions": [
     {
       "type": "todo|reminder|note|journal",
-      "title": "Brief title",
-      "content": "Full content",
+      "title": "Brief title (e.g. 'Call Daniel')",
+      "content": "Additional details ONLY. If title covers everything, leave empty. (e.g. 'Discuss budget' or '')",
       "date": "ISO date string if applicable",
       "priority": "urgent-important|not-urgent-important|urgent-not-important|not-urgent-not-important",
       "tags": ["tag1", "tag2"]

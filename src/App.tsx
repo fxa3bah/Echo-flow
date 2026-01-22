@@ -6,15 +6,20 @@ import { AllEntries } from './components/AllEntries'
 import { CalendarView } from './components/CalendarView'
 import { FocusView } from './components/FocusView'
 import { DiaryEditor } from './components/DiaryEditor'
+import { ArchiveView } from './components/ArchiveView'
 import { AIInsights } from './components/AIInsights'
 import { SettingsModal } from './components/SettingsModal'
 import { LoginScreen } from './components/LoginScreen'
+import { QuickActionCard } from './components/QuickActionCard'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useReminderNotifications } from './hooks/useReminderNotifications'
 import { getCurrentUser, isSupabaseConfigured } from './services/supabaseSync'
-import { cn } from './lib/utils'
+import { cn, ensureString } from './lib/utils'
+import { db } from './lib/db'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { Settings } from 'lucide-react'
 
-type View = 'home' | 'aiinsights' | 'entries' | 'calendar' | 'focus' | 'diary'
+type View = 'home' | 'aiinsights' | 'entries' | 'calendar' | 'focus' | 'diary' | 'archive'
 
 function App() {
   console.log('App component rendering...')
@@ -87,6 +92,11 @@ function App() {
       handler: () => setCurrentView('diary'),
     },
     {
+      key: 'b',
+      ctrlKey: true,
+      handler: () => setCurrentView('archive'),
+    },
+    {
       key: ',',
       ctrlKey: true,
       handler: () => setShowSettings(true),
@@ -130,26 +140,41 @@ function App() {
     )
   }
 
-  // Show main app
-  console.log('Rendering main app...')
   return (
-    <div className={cn('min-h-screen transition-colors duration-200', theme)}>
-      <div className="flex flex-col h-screen">
-        {/* Header - Sticky Navigation */}
-        <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-2 sm:px-4 py-1.5 sm:py-3 flex items-center justify-between shadow-sm gap-1 sm:gap-4">
-          <h1 className="text-sm sm:text-xl font-bold text-foreground whitespace-nowrap flex-shrink-0">
-            <span className="hidden sm:inline">Echo Flow</span>
-            <span className="sm:hidden">Echo</span>
+    <div className={cn('min-h-screen transition-colors duration-200 flex overflow-hidden', theme)}>
+      {/* Side Navigation - Wide Screens / Foldables Opened */}
+      <aside className="hidden md:flex flex-col w-16 lg:w-64 border-r border-border bg-background/95 backdrop-blur shrink-0 transition-all duration-300">
+        <div className="p-4 border-b border-border mb-4 flex items-center justify-center lg:justify-start overflow-hidden">
+          <h1 className="text-xl font-bold text-foreground">
+            <span className="hidden lg:inline">Echo Flow</span>
+            <span className="lg:hidden">EF</span>
           </h1>
-          <Navigation
-            currentView={currentView}
-            onViewChange={setCurrentView}
-            onOpenSettings={() => setShowSettings(true)}
-          />
+        </div>
+        <Navigation
+          currentView={currentView}
+          onViewChange={setCurrentView}
+          onOpenSettings={() => setShowSettings(true)}
+          orientation="vertical"
+        />
+      </aside>
+
+      <div className="flex flex-col flex-1 h-screen overflow-hidden">
+        {/* Header - Mobile Only or common status */}
+        <header className="md:hidden sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur px-4 py-3 flex items-center justify-between shadow-sm shrink-0">
+          <h1 className="text-lg font-bold text-foreground">Echo Flow</h1>
+          {/* We can put secondary actions here if needed */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSettings(true)}
+              className="p-2 rounded-lg hover:bg-accent text-muted-foreground"
+            >
+              <Settings size={20} />
+            </button>
+          </div>
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto pb-20 md:pb-0">
           {currentView === 'home' && (
             <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-2xl">
               <div className="text-center mb-6 sm:mb-8 px-2">
@@ -160,18 +185,21 @@ function App() {
               </div>
               <VoiceRecorder />
 
-              {/* AI Chat Link */}
-              <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20 mx-2 sm:mx-0">
-                <h3 className="text-base sm:text-lg font-semibold mb-2">Need AI assistance?</h3>
-                <p className="text-xs sm:text-sm text-muted-foreground mb-4">
-                  Chat with AI to organize tasks, get insights, and manage your day
-                </p>
-                <button
-                  onClick={() => setCurrentView('aiinsights')}
-                  className="w-full sm:w-auto px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm sm:text-base min-h-[44px]"
-                >
-                  Open AI Chat
-                </button>
+              <QuickActionCard />
+
+              {/* Recent Activity Section */}
+              <div className="mt-12 space-y-4">
+                <div className="flex items-center justify-between px-2">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Recent Pulse</h3>
+                  <button
+                    onClick={() => setCurrentView('entries')}
+                    className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline"
+                  >
+                    View All Studio
+                  </button>
+                </div>
+
+                <RecentEntriesList />
               </div>
             </div>
           )}
@@ -180,12 +208,62 @@ function App() {
           {currentView === 'entries' && <AllEntries />}
           {currentView === 'calendar' && <CalendarView />}
           {currentView === 'focus' && <FocusView />}
+          {currentView === 'archive' && <ArchiveView />}
           {currentView === 'diary' && <DiaryEditor />}
         </main>
+
+        {/* Bottom Navigation - Mobile Portrait Only */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur px-2 py-1 pb-safe shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.1)]">
+          <Navigation
+            currentView={currentView}
+            onViewChange={setCurrentView}
+            onOpenSettings={() => setShowSettings(true)}
+            orientation="horizontal"
+          />
+        </div>
       </div>
 
       {/* Settings Modal */}
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
+    </div>
+  )
+}
+
+const RecentEntriesList = () => {
+  const entries = useLiveQuery(() => db.entries.orderBy('createdAt').reverse().limit(3).toArray()) || []
+
+  if (entries.length === 0) return null
+
+  return (
+    <div className="space-y-3">
+      {entries.map(entry => (
+        <div
+          key={entry.id}
+          className="bg-card/30 backdrop-blur-sm border border-border/30 rounded-3xl p-5 transition-all hover:border-primary/20 group"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className={cn(
+              "px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest",
+              entry.type === 'todo' ? "bg-emerald-500/10 text-emerald-600" :
+                entry.type === 'reminder' ? "bg-purple-500/10 text-purple-600" :
+                  entry.type === 'diary' ? "bg-orange-500/10 text-orange-600" :
+                    "bg-blue-500/10 text-blue-600"
+            )}>
+              {entry.type}
+            </span>
+            <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-tighter">
+              {new Date(entry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+          {entry.title && (
+            <div className="font-black text-sm mb-1 text-foreground">{entry.title}</div>
+          )}
+          <div
+            className="text-xs font-medium text-muted-foreground/80 line-clamp-2 prose-sm dark:prose-invert"
+            dangerouslySetInnerHTML={{ __html: ensureString(entry.content) }}
+          />
+        </div>
+      ))}
     </div>
   )
 }

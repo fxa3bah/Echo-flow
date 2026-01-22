@@ -111,6 +111,11 @@ export class EchoFlowDatabase extends Dexie {
 
       console.log('✅ Migration complete!')
     })
+
+    // Version 3 - ARCHIVE & PKM Support
+    this.version(3).stores({
+      entries: 'id, type, source, date, createdAt, *tags, priority, completed, processed, archived',
+    })
   }
 }
 
@@ -184,7 +189,7 @@ db.on('ready', async () => {
 // Trigger sync when local data changes (only if Dexie Observable is available).
 const changesEvent = (db as any)._events?.changes
 if (changesEvent?.subscribe) {
-  ;(db as any).on('changes', (changes: any) => {
+  ; (db as any).on('changes', (changes: any) => {
     console.log('IndexedDB changes detected:', changes.length, 'changes')
     markLocalChange()
     triggerSupabaseSync()

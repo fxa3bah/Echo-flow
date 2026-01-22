@@ -92,15 +92,6 @@ export async function applyAIActions(actions: AIAction[], fallbackDate = new Dat
   let created = 0
   let updated = 0
   let diaryUpdated = false
-  const actionSummariesByDate = new Map<string, { date: Date; lines: string[] }>()
-
-  const addActionSummary = (date: Date, action: AIAction) => {
-    const key = date.toDateString()
-    const existing = actionSummariesByDate.get(key) ?? { date, lines: [] }
-    const dueText = action.date ? ` (due ${action.date.toLocaleString()})` : ''
-    existing.lines.push(`[${action.type}] ${action.title}${dueText}`)
-    actionSummariesByDate.set(key, existing)
-  }
 
   for (const action of actions) {
     const actionDate = action.date || fallbackDate
@@ -126,7 +117,6 @@ export async function applyAIActions(actions: AIAction[], fallbackDate = new Dat
           updatedAt: new Date(),
         })
         updated += 1
-        addActionSummary(actionDate, { ...action, title: normalizedTitle })
       } else {
         const priority = validPriorities.includes(action.priority as Priority)
           ? action.priority as Priority
@@ -147,20 +137,11 @@ export async function applyAIActions(actions: AIAction[], fallbackDate = new Dat
           processed: true,
         })
         created += 1
-        addActionSummary(actionDate, { ...action, title: normalizedTitle })
       }
     }
 
     if (action.type === 'journal' || action.type === 'note') {
       const appended = await appendToDiaryEntry(actionDate, normalizedContent)
-      diaryUpdated = diaryUpdated || appended
-    }
-  }
-
-  for (const { date, lines } of actionSummariesByDate.values()) {
-    if (lines.length > 0) {
-      const summary = lines.map((line) => `- ${line}`).join('\n')
-      const appended = await appendToDiaryEntry(date, summary)
       diaryUpdated = diaryUpdated || appended
     }
   }
