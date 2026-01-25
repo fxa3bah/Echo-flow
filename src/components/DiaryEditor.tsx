@@ -77,9 +77,9 @@ export function DiaryEditor() {
     <div className="container mx-auto px-4 max-w-4xl py-8">
       {/* Header */}
       <header className="flex flex-col sm:flex-row items-center justify-between mb-12 gap-4">
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight">{formatDate(selectedDate)}</h1>
-          <p className="text-muted-foreground mt-1">Daily Journal</p>
+        <div className="text-center sm:text-left">
+          <h1 className="text-2xl sm:text-4xl font-bold tracking-tight">{formatDate(selectedDate)}</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Daily Journal</p>
         </div>
 
         <div className="flex items-center gap-1 bg-secondary/50 p-1 rounded-xl">
@@ -98,7 +98,7 @@ export function DiaryEditor() {
       {/* Unified Journal Feed */}
       <div className="space-y-8 mb-40 min-h-[50vh] relative pl-4">
         {sortedEntries.length === 0 ? (
-          <div className="text-center py-20 border-2 border-dashed border-border rounded-2xl text-muted-foreground ml-8">
+          <div className="text-center py-20 border-2 border-dashed border-border rounded-2xl text-muted-foreground sm:ml-8">
             <p>No entries for this day yet.</p>
             <p className="text-sm mt-1">Record a note or start typing below.</p>
           </div>
@@ -192,8 +192,8 @@ export function DiaryEditor() {
       </div>
 
       {/* Quick Add Entry Box */}
-      <div className="fixed bottom-24 md:bottom-10 left-1/2 -translate-x-1/2 w-full max-w-xl px-4 z-40">
-        <div className="bg-background/95 backdrop-blur-xl border border-border/50 shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl p-3 ring-1 ring-black/5 dark:ring-white/5">
+      <div className="fixed bottom-[84px] md:bottom-10 left-1/2 -translate-x-1/2 w-full max-w-xl px-4 z-40 pb-safe">
+        <div className="bg-background/95 backdrop-blur-xl border border-border/50 shadow-[0_8px_32px_rgba(0,0,0,0.1)] rounded-3xl p-3 sm:p-4 ring-1 ring-black/5 dark:ring-white/5 transition-all focus-within:shadow-[0_8px_48px_rgba(0,0,0,0.2)]">
           <TiptapEditor
             key={quickAddKey}
             content=""

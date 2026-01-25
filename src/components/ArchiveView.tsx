@@ -16,7 +16,7 @@ import {
     ArchiveRestore
 } from 'lucide-react'
 import { db } from '../lib/db'
-import { formatDate, cn, ensureString } from '../lib/utils'
+import { formatDate, cn, ensureString, stripHtml } from '../lib/utils'
 import { TagCloud, getTagColor } from './TagCloud'
 import { semanticSearch, type SearchResult } from '../services/semanticSearchService'
 
@@ -55,8 +55,8 @@ export function ArchiveView() {
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase()
             filtered = filtered.filter(e =>
-                e.content.toLowerCase().includes(q) ||
-                (e.title && e.title.toLowerCase().includes(q)) ||
+                stripHtml(ensureString(e.content)).toLowerCase().includes(q) ||
+                (e.title && stripHtml(ensureString(e.title)).toLowerCase().includes(q)) ||
                 (e.tags && e.tags.some(t => t.toLowerCase().includes(q)))
             )
         }
@@ -146,7 +146,7 @@ export function ArchiveView() {
                             <div className="space-y-3">
                                 {onThisDay.slice(0, 3).map(entry => (
                                     <div key={entry.id} className="text-sm border-l-2 border-orange-500/30 pl-3 py-1">
-                                        <p className="line-clamp-2 text-foreground/80">{ensureString(entry.title || entry.content)}</p>
+                                        <p className="line-clamp-2 text-foreground/80">{stripHtml(ensureString(entry.title || entry.content))}</p>
                                         <p className="text-[10px] text-muted-foreground mt-1">{new Date(entry.date).getFullYear()}</p>
                                     </div>
                                 ))}
@@ -220,11 +220,11 @@ export function ArchiveView() {
                                             </div>
 
                                             <h4 className="text-lg font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
-                                                {ensureString(entry.title || entry.content)}
+                                                {stripHtml(ensureString(entry.title || entry.content))}
                                             </h4>
-                                            {entry.title && entry.content && entry.title !== entry.content && (
+                                            {entry.title && entry.content && stripHtml(entry.title) !== stripHtml(entry.content) && (
                                                 <p className="text-sm text-muted-foreground mt-2 line-clamp-3">
-                                                    {ensureString(entry.content)}
+                                                    {stripHtml(ensureString(entry.content))}
                                                 </p>
                                             )}
 

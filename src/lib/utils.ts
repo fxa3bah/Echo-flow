@@ -36,6 +36,12 @@ export function ensureString(value: unknown): string {
   return typeof value === 'string' ? value : ''
 }
 
+export function stripHtml(html: string): string {
+  if (!html) return ''
+  // Basic HTML tag stripping
+  return html.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').trim()
+}
+
 export function isSameDay(date1: Date, date2: Date): boolean {
   return (
     date1.getFullYear() === date2.getFullYear() &&

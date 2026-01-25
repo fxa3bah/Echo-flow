@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Sparkles, PenTool, CheckCircle2, Send, Loader2, Mic, MicOff, Trash2 } from 'lucide-react'
 import { TiptapEditor } from './TiptapEditor'
 import { db } from '../lib/db'
-import { cn } from '../lib/utils'
+import { cn, stripHtml } from '../lib/utils'
 import { useAIChat } from '../hooks/useAIChat'
 import { marked } from 'marked'
 
@@ -67,7 +67,7 @@ export function QuickActionCard() {
     }
 
     return (
-        <div className="mt-8 bg-card/50 backdrop-blur-sm border border-border/50 rounded-[40px] overflow-hidden shadow-2xl transition-all ring-1 ring-black/5 dark:ring-white/5">
+        <div className="mt-8 bg-card/50 backdrop-blur-sm border border-border/50 rounded-3xl sm:rounded-[40px] overflow-hidden shadow-2xl transition-all ring-1 ring-black/5 dark:ring-white/5">
             {/* Tabs Header */}
             <div className="flex bg-muted/20 p-1.5 gap-1">
                 <button
@@ -99,7 +99,7 @@ export function QuickActionCard() {
             {/* Tab Content */}
             <div className="p-6 md:p-8">
                 {activeTab === 'ai' ? (
-                    <div className="flex flex-col h-[400px]">
+                    <div className="flex flex-col h-[350px] sm:h-[450px]">
                         {/* Mini Chat Feed */}
                         <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
                             {messages.map((message, index) => (
@@ -151,8 +151,8 @@ export function QuickActionCard() {
                                                             </button>
                                                         </div>
                                                     </div>
-                                                    <div className="font-black text-sm text-foreground">{action.title}</div>
-                                                    {action.content && <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{action.content}</div>}
+                                                    <div className="font-black text-sm text-foreground">{stripHtml(action.title)}</div>
+                                                    {action.content && <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{stripHtml(action.content)}</div>}
                                                 </div>
                                             ))}
                                         </div>
@@ -174,7 +174,7 @@ export function QuickActionCard() {
                         </div>
 
                         {/* Input Area */}
-                        <div className="flex gap-2 bg-background/50 p-2 rounded-[28px] border border-border/50 shadow-inner focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+                        <div className="flex gap-2 bg-background/50 p-2 rounded-2xl sm:rounded-[28px] border border-border/50 shadow-inner focus-within:ring-2 focus-within:ring-primary/20 transition-all">
                             <button
                                 onClick={handleVoiceToggle}
                                 className={cn(

@@ -1,4 +1,5 @@
 import { db } from '../lib/db'
+import { stripHtml, ensureString } from '../lib/utils'
 import { chatWithGroq, type ChatMessage } from './groqChatService'
 import type { Entry } from '../types'
 
@@ -35,8 +36,8 @@ export async function semanticSearch(query: string): Promise<SearchResult[]> {
         const allEntries = await db.entries.toArray()
 
         const candidates = allEntries.filter(entry => {
-            const content = entry.content.toLowerCase()
-            const title = (entry.title || '').toLowerCase()
+            const content = stripHtml(ensureString(entry.content)).toLowerCase()
+            const title = stripHtml(ensureString(entry.title || '')).toLowerCase()
             const tags = (entry.tags || []).map(t => t.toLowerCase())
 
             return keywords.some(k =>
@@ -53,8 +54,8 @@ export async function semanticSearch(query: string): Promise<SearchResult[]> {
         // Here we'll rank by keyword density/match for performance.
         const results: SearchResult[] = candidates.map(entry => {
             let score = 0
-            const content = entry.content.toLowerCase()
-            const title = (entry.title || '').toLowerCase()
+            const content = stripHtml(ensureString(entry.content)).toLowerCase()
+            const title = stripHtml(ensureString(entry.title || '')).toLowerCase()
 
             keywords.forEach(k => {
                 if (title.includes(k)) score += 3

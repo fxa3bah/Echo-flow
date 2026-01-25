@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Trash2, Calendar as CalendarIcon, CheckSquare, Square, SquarePen, SlidersHorizontal, X, Archive, ArchiveRestore } from 'lucide-react'
 import { db } from '../lib/db'
-import { cn, ensureDate, ensureString } from '../lib/utils'
+import { cn, ensureDate, ensureString, stripHtml } from '../lib/utils'
 import { TagCloud, getTagColor } from './TagCloud'
 import type { Entry } from '../types'
 
@@ -89,7 +89,7 @@ export function AllEntries() {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(
         (e) =>
-          ensureString(e.content).toLowerCase().includes(query) ||
+          stripHtml(ensureString(e.content)).toLowerCase().includes(query) ||
           (e.title && e.title.toLowerCase().includes(query)) ||
           (e.tags || []).some((tag) => tag.toLowerCase().includes(query))
       )

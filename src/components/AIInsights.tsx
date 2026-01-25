@@ -55,7 +55,7 @@ export function AIInsights() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] max-w-4xl mx-auto p-4">
+    <div className="flex flex-col flex-1 h-full max-w-4xl mx-auto p-4 sm:p-6">
       {/* Header */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
@@ -121,63 +121,63 @@ export function AIInsights() {
                     (action.type === 'todo' || action.type === 'reminder') &&
                     !action.date
                 ) && (
-                  <div className="rounded-lg border border-border bg-background p-3 text-xs text-muted-foreground space-y-2">
-                    <div className="font-medium text-foreground">Set due dates fast</div>
-                    <div className="space-y-2">
-                      {message.pendingActions.map((action, actionIdx) => {
-                        if (
-                          message.rejectedActionIndices?.includes(actionIdx) ||
-                          (action.type !== 'todo' && action.type !== 'reminder') ||
-                          action.date
-                        ) {
-                          return null
-                        }
+                    <div className="rounded-lg border border-border bg-background p-3 text-xs text-muted-foreground space-y-2">
+                      <div className="font-medium text-foreground">Set due dates fast</div>
+                      <div className="space-y-2">
+                        {message.pendingActions.map((action, actionIdx) => {
+                          if (
+                            message.rejectedActionIndices?.includes(actionIdx) ||
+                            (action.type !== 'todo' && action.type !== 'reminder') ||
+                            action.date
+                          ) {
+                            return null
+                          }
 
-                        const quickDueOptions = [
-                          {
-                            label: 'In 2 hours',
-                            getDate: () => new Date(Date.now() + 2 * 60 * 60 * 1000),
-                          },
-                          {
-                            label: 'Tomorrow 9am',
-                            getDate: () => {
-                              const date = new Date()
-                              date.setDate(date.getDate() + 1)
-                              date.setHours(9, 0, 0, 0)
-                              return date
+                          const quickDueOptions = [
+                            {
+                              label: 'In 2 hours',
+                              getDate: () => new Date(Date.now() + 2 * 60 * 60 * 1000),
                             },
-                          },
-                          {
-                            label: 'Next week',
-                            getDate: () => {
-                              const date = new Date()
-                              date.setDate(date.getDate() + 7)
-                              date.setHours(9, 0, 0, 0)
-                              return date
+                            {
+                              label: 'Tomorrow 9am',
+                              getDate: () => {
+                                const date = new Date()
+                                date.setDate(date.getDate() + 1)
+                                date.setHours(9, 0, 0, 0)
+                                return date
+                              },
                             },
-                          },
-                        ]
+                            {
+                              label: 'Next week',
+                              getDate: () => {
+                                const date = new Date()
+                                date.setDate(date.getDate() + 7)
+                                date.setHours(9, 0, 0, 0)
+                                return date
+                              },
+                            },
+                          ]
 
-                        return (
-                          <div key={`${action.title}-${actionIdx}`} className="flex flex-wrap items-center gap-2">
-                            <span className="text-foreground">"{action.title}"</span>
-                            {quickDueOptions.map((option) => (
-                              <button
-                                key={option.label}
-                                onClick={() =>
-                                  handleUpdatePendingAction(index, actionIdx, { date: option.getDate() })
-                                }
-                                className="px-2 py-1 rounded bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
-                              >
-                                {option.label}
-                              </button>
-                            ))}
-                          </div>
-                        )
-                      })}
+                          return (
+                            <div key={`${action.title}-${actionIdx}`} className="flex flex-wrap items-center gap-2">
+                              <span className="text-foreground">"{action.title}"</span>
+                              {quickDueOptions.map((option) => (
+                                <button
+                                  key={option.label}
+                                  onClick={() =>
+                                    handleUpdatePendingAction(index, actionIdx, { date: option.getDate() })
+                                  }
+                                  className="px-2 py-1 rounded bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+                                >
+                                  {option.label}
+                                </button>
+                              ))}
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">
                     {message.pendingActions.filter((_, i) => !message.rejectedActionIndices?.includes(i)).length} action(s) to review

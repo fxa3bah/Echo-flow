@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Plus } from 'lucide-re
 import { useState } from 'react'
 import { marked } from 'marked'
 import { db } from '../lib/db'
-import { formatDate, isSameDay, startOfDay, endOfDay, cn, ensureDate, ensureString } from '../lib/utils'
+import { formatDate, isSameDay, startOfDay, endOfDay, cn, ensureDate, ensureString, stripHtml } from '../lib/utils'
 import type { Entry, EntryType } from '../types'
 
 const entryTypeColors: Partial<Record<EntryType, string>> = {
@@ -278,11 +278,13 @@ export function CalendarView() {
                               entry.completed && 'line-through text-muted-foreground'
                             )}
                           >
-                            {entry.title}
+                            {stripHtml(entry.title || '') || stripHtml(entry.content).slice(0, 50) || 'Untitled'}
                           </h4>
-                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                            {ensureString(entry.content)}
-                          </p>
+                          {entry.content && stripHtml(entry.content) !== stripHtml(entry.title || '') && (
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                              {stripHtml(ensureString(entry.content))}
+                            </p>
+                          )}
 
                           {entry.tags && entry.tags.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-2">
@@ -321,7 +323,10 @@ export function CalendarView() {
                       key={item.id}
                       className="bg-card border-l-4 border-blue-400 rounded-lg p-4"
                     >
-                      <p className="text-sm text-foreground whitespace-pre-wrap">{item.content}</p>
+                      <div
+                        dangerouslySetInnerHTML={{ __html: ensureString(item.content) }}
+                        className="prose prose-sm dark:prose-invert max-w-none text-foreground"
+                      />
                       {item.tags && item.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {item.tags.map((tag) => (

@@ -50,6 +50,17 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 // Initialize Supabase client
 let supabase: SupabaseClient | null = null
 
+// Flag to prevent feedback loops during sync
+let isInternalSyncing = false
+
+export function isSyncing(): boolean {
+  return isInternalSyncing
+}
+
+function setIsSyncing(value: boolean) {
+  isInternalSyncing = value
+}
+
 function getSupabaseClient(): SupabaseClient {
   if (!supabase) {
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
@@ -389,7 +400,10 @@ export async function downloadFromSupabase(): Promise<{
 
     // Import data
     const jsonData = JSON.stringify(dataWithVersion)
+
+    setIsSyncing(true)
     const result = await importData(jsonData)
+    setIsSyncing(false)
 
     if (result.success) {
       localStorage.setItem('supabase_lastSyncTime', new Date().toISOString())
@@ -602,7 +616,7 @@ export function stopSupabaseAutoSync() {
  */
 export function onAuthStateChange(callback: (user: User | null) => void) {
   if (!isSupabaseConfigured()) {
-    return { data: { subscription: { unsubscribe: () => {} } } }
+    return { data: { subscription: { unsubscribe: () => { } } } }
   }
 
   const client = getSupabaseClient()
@@ -684,6 +698,9 @@ export function stopRealtimeSync() {
  * Merge with local data using timestamp-based resolution
  */
 async function handleServerChange(serverData: any) {
+  // Don't process if we are already in the middle of a sync operation
+  if (isInternalSyncing) return
+
   try {
     // Get local updated_at timestamp
     const localUpdatedAt = await getLocalLatestUpdateTime()
@@ -700,15 +717,35 @@ async function handleServerChange(serverData: any) {
     const localTimestamp = new Date(localUpdatedAt).getTime()
 
     if (serverTimestamp > localTimestamp) {
-      // Server is newer, download and overwrite local
-      console.log('Server has newer data, syncing down...')
-      await downloadFromSupabase()
+      // Server is newer, import directly from payload if available
+      console.log('Server has newer data (Real-time), syncing down...')
+
+      if (serverData.data) {
+        const dataWithVersion = {
+          version: '1.0',
+          ...serverData.data
+        }
+
+        setIsSyncing(true)
+        const result = await importData(JSON.stringify(dataWithVersion))
+        setIsSyncing(false)
+
+        if (result.success) {
+          localStorage.setItem('supabase_lastSyncTime', serverData.updated_at)
+          console.log('Real-time sync applied successfully')
+        }
+      } else {
+        // Fallback to full download if data is missing from payload
+        await downloadFromSupabase()
+      }
     } else {
       // Local is newer or equal, no action needed
       console.log('Local data is up to date')
     }
   } catch (error) {
     console.error('Error handling server change:', error)
+  } finally {
+    setIsSyncing(false)
   }
 }
 
@@ -719,6 +756,9 @@ let uploadDebounceTimer: number | null = null
 const UPLOAD_DEBOUNCE_MS = 2000 // 2 seconds
 
 export function triggerLocalSync() {
+  // Don't trigger if we are currently importing from Supabase
+  if (isInternalSyncing) return
+
   // Clear existing timer
   if (uploadDebounceTimer) {
     clearTimeout(uploadDebounceTimer)
@@ -727,7 +767,7 @@ export function triggerLocalSync() {
   // Schedule upload after debounce period
   uploadDebounceTimer = window.setTimeout(async () => {
     const authenticated = await isAuthenticated()
-    if (authenticated) {
+    if (authenticated && !isInternalSyncing) {
       console.log('Local change detected, uploading to Supabase...')
       await uploadToSupabase()
     }

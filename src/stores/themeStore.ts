@@ -20,13 +20,15 @@ const resolveTheme = (theme: Theme): 'light' | 'dark' => {
 
 export const useThemeStore = create<ThemeState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       theme: 'system',
       actualTheme: getSystemTheme(),
       setTheme: (theme) => {
-        set({ theme, actualTheme: resolveTheme(theme) })
+        const resolved = resolveTheme(theme)
+        set({ theme, actualTheme: resolved })
+
         const root = document.documentElement
-        if (resolveTheme(theme) === 'dark') {
+        if (resolved === 'dark') {
           root.classList.add('dark')
         } else {
           root.classList.remove('dark')
@@ -35,6 +37,12 @@ export const useThemeStore = create<ThemeState>()(
     }),
     {
       name: 'echo-flow-theme',
+      partialize: (state) => ({ theme: state.theme }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.setTheme(state.theme)
+        }
+      },
     }
   )
 )

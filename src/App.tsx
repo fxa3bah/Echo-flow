@@ -27,7 +27,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
-  const { theme } = useThemeStore()
+  const { theme, actualTheme } = useThemeStore()
   console.log('App state:', { isAuthenticated, isCheckingAuth, theme })
 
   // Check authentication on mount
@@ -141,7 +141,7 @@ function App() {
   }
 
   return (
-    <div className={cn('min-h-screen transition-colors duration-200 flex overflow-hidden', theme)}>
+    <div className={cn('min-h-screen transition-colors duration-200 flex overflow-hidden', actualTheme)}>
       {/* Side Navigation - Wide Screens / Foldables Opened */}
       <aside className="hidden md:flex flex-col w-16 lg:w-64 border-r border-border bg-background/95 backdrop-blur shrink-0 transition-all duration-300">
         <div className="p-4 border-b border-border mb-4 flex items-center justify-center lg:justify-start overflow-hidden">
@@ -160,7 +160,7 @@ function App() {
 
       <div className="flex flex-col flex-1 h-screen overflow-hidden">
         {/* Header - Mobile Only or common status */}
-        <header className="md:hidden sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur px-4 py-3 flex items-center justify-between shadow-sm shrink-0">
+        <header className="md:hidden sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur px-4 py-3 pt-safe flex items-center justify-between shadow-sm shrink-0">
           <h1 className="text-lg font-bold text-foreground">Echo Flow</h1>
           {/* We can put secondary actions here if needed */}
           <div className="flex items-center gap-2">
@@ -174,7 +174,10 @@ function App() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto pb-20 md:pb-0">
+        <main className={cn(
+          "flex-1 md:pb-0",
+          currentView === 'aiinsights' ? "flex flex-col" : "overflow-auto pb-20"
+        )}>
           {currentView === 'home' && (
             <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-2xl">
               <div className="text-center mb-6 sm:mb-8 px-2">

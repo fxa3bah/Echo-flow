@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { CheckCircle2, Circle, Clock, Flame, Calendar, Moon, RefreshCw } from 'lucide-react'
 import { db } from '../lib/db'
-import { cn, ensureDate, ensureString } from '../lib/utils'
+import { cn, ensureDate, ensureString, stripHtml } from '../lib/utils'
 import type { Entry } from '../types'
 import { useState } from 'react'
 
@@ -161,11 +161,11 @@ export function FocusView() {
                           return (
                             <>
                               <h3 className="font-medium text-sm sm:text-base">
-                                {entry.title || entryContent.substring(0, 60)}
+                                {stripHtml(entry.title || '') || stripHtml(entryContent).substring(0, 60)}
                               </h3>
-                              {entry.title && entryContent !== entry.title && (
+                              {entry.title && stripHtml(entryContent) !== stripHtml(entry.title) && (
                                 <p className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-2">
-                                  {entryContent}
+                                  {stripHtml(entryContent)}
                                 </p>
                               )}
                             </>
