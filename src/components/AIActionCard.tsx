@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CheckCircle2, X, Edit3, Calendar as CalendarIcon, Tag as TagIcon, CheckSquare, Clock, FileText, BookOpen } from 'lucide-react'
+import { Check, X, Edit3, Calendar, Hash, CheckSquare, Clock, FileText, BookOpen, AlertCircle } from 'lucide-react'
 import { cn } from '../lib/utils'
 import type { AIAction } from '../services/aiActions'
 
@@ -10,168 +10,104 @@ interface AIActionCardProps {
   isRejected?: boolean
 }
 
-const actionIcons = {
-  todo: CheckSquare,
-  reminder: Clock,
-  note: FileText,
-  journal: BookOpen,
-}
-
-const actionColors = {
-  todo: 'border-green-500 bg-green-50 dark:bg-green-950/30',
-  reminder: 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30',
-  note: 'border-purple-500 bg-purple-50 dark:bg-purple-950/30',
-  journal: 'border-blue-500 bg-blue-50 dark:bg-blue-950/30',
-}
+const icons = { todo: CheckSquare, reminder: Clock, note: FileText, journal: BookOpen }
 
 export function AIActionCard({ action, onAccept, onReject, isRejected }: AIActionCardProps) {
   const [isEditing, setIsEditing] = useState(false)
-  const [editedAction, setEditedAction] = useState(action)
-  const [editedTags, setEditedTags] = useState((action.tags || []).join(', '))
+  const [edit, setEdit] = useState(action)
 
-  const Icon = actionIcons[action.type]
-  const formatDateTimeLocal = (date: Date) => {
-    const offset = date.getTimezoneOffset()
-    const local = new Date(date.getTime() - offset * 60 * 1000)
-    return local.toISOString().slice(0, 16)
-  }
-
-  const handleSave = () => {
-    const updatedAction = {
-      ...editedAction,
-      tags: editedTags.split(',').map((t) => t.trim()).filter(Boolean),
-    }
-    onAccept(updatedAction)
-    setIsEditing(false)
-  }
-
-  const handleAccept = () => {
-    onAccept(editedAction)
-  }
+  const Icon = icons[action.type] || AlertCircle
 
   if (isRejected) {
     return (
-      <div className={cn('border-l-4 rounded p-3 opacity-50', actionColors[action.type])}>
-        <div className="flex items-center gap-2">
-          <Icon className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm line-through text-muted-foreground">{action.title}</span>
-          <span className="ml-auto text-xs text-destructive">Rejected</span>
+      <div className="bg-muted/30 border border-border/50 rounded-2xl p-4 opacity-40">
+        <div className="flex items-center gap-3">
+          <Icon size={14} className="text-muted-foreground" />
+          <span className="text-xs font-medium line-through">{action.title}</span>
+          <span className="ml-auto text-[10px] font-black uppercase text-destructive tracking-widest">Discarded</span>
         </div>
       </div>
     )
   }
 
   return (
-    <div className={cn('border-l-4 rounded p-3', actionColors[action.type])}>
+    <div className="bg-card/40 backdrop-blur-xl border border-border/40 rounded-[24px] p-5 shadow-sm transition-all hover:shadow-md ring-1 ring-black/5 dark:ring-white/5">
       {isEditing ? (
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-medium mb-1">Title</label>
-            <input
-              type="text"
-              value={editedAction.title}
-              onChange={(e) => setEditedAction({ ...editedAction, title: e.target.value })}
-              className="w-full px-2 py-1 text-sm border border-border rounded bg-background"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1">Content</label>
-            <textarea
-              value={editedAction.content}
-              onChange={(e) => setEditedAction({ ...editedAction, content: e.target.value })}
-              className="w-full px-2 py-1 text-sm border border-border rounded bg-background resize-none"
-              rows={2}
-            />
-          </div>
-          {(action.type === 'todo' || action.type === 'reminder') && (
-            <div>
-              <label className="block text-xs font-medium mb-1">Date</label>
-              <input
-                type="datetime-local"
-                value={editedAction.date ? formatDateTimeLocal(new Date(editedAction.date)) : ''}
-                onChange={(e) =>
-                  setEditedAction({ ...editedAction, date: e.target.value ? new Date(e.target.value) : undefined })
-                }
-                className="w-full px-2 py-1 text-sm border border-border rounded bg-background"
-              />
-            </div>
-          )}
-          <div>
-            <label className="block text-xs font-medium mb-1">Tags (comma-separated)</label>
-            <input
-              type="text"
-              value={editedTags}
-              onChange={(e) => setEditedTags(e.target.value)}
-              placeholder="work, important, project"
-              className="w-full px-2 py-1 text-sm border border-border rounded bg-background"
-            />
-          </div>
+        <div className="space-y-4">
+          <input
+            value={edit.title}
+            onChange={e => setEdit({ ...edit, title: e.target.value })}
+            className="w-full bg-background/50 border-none rounded-xl px-3 py-2 text-sm font-bold focus:ring-1 focus:ring-primary"
+            placeholder="Title"
+          />
+          <textarea
+            value={edit.content}
+            onChange={e => setEdit({ ...edit, content: e.target.value })}
+            className="w-full bg-background/50 border-none rounded-xl px-3 py-2 text-xs h-20 resize-none focus:ring-1 focus:ring-primary"
+            placeholder="Details..."
+          />
           <div className="flex gap-2">
-            <button
-              onClick={handleSave}
-              className="flex-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-            >
-              Save & Accept
-            </button>
-            <button
-              onClick={() => setIsEditing(false)}
-              className="px-3 py-1.5 text-sm bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
-            >
-              Cancel
-            </button>
+            <button onClick={() => onAccept(edit)} className="flex-1 bg-primary text-primary-foreground py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">Update & Accept</button>
+            <button onClick={() => setIsEditing(false)} className="px-4 bg-muted py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted-foreground">Cancel</button>
           </div>
         </div>
       ) : (
-        <div className="space-y-2">
-          <div className="flex items-start gap-2">
-            <Icon className="w-4 h-4 mt-0.5 flex-shrink-0" />
+        <div className="space-y-4">
+          <div className="flex items-start gap-4">
+            <div className={cn(
+              "p-2.5 rounded-2xl bg-primary/5 text-primary shadow-inner",
+              action.priority === 'urgent-important' && "bg-destructive/5 text-destructive"
+            )}>
+              <Icon size={20} />
+            </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-sm">{action.title}</div>
-              <div className="text-xs text-muted-foreground mt-1">{action.content}</div>
-              <div className="flex flex-wrap gap-2 mt-2">
+              <div className="text-sm font-black tracking-tight leading-none mb-1">
+                {action.title || "Capture Entry"}
+              </div>
+              {action.content && (
+                <p className="text-[11px] text-muted-foreground/60 line-clamp-2 leading-snug">
+                  {action.content}
+                </p>
+              )}
+
+              <div className="flex flex-wrap gap-3 mt-3">
                 {action.date && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <CalendarIcon className="w-3 h-3" />
-                    {new Date(action.date).toLocaleDateString()} {new Date(action.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  <div className="flex items-center gap-1.5 text-[10px] font-black text-primary/60 uppercase tracking-tighter">
+                    <Calendar size={12} />
+                    {new Date(action.date).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </div>
                 )}
-                {action.tags && action.tags.length > 0 && (
-                  <div className="flex items-center gap-1 flex-wrap">
-                    <TagIcon className="w-3 h-3 text-muted-foreground" />
-                    {action.tags.map((tag, i) => (
-                      <span key={i} className="text-xs px-1.5 py-0.5 bg-background rounded">
-                        #{tag}
-                      </span>
-                    ))}
+                {action.tags?.map(t => (
+                  <div key={t} className="flex items-center gap-1 text-[10px] font-black text-muted-foreground/40 uppercase tracking-tighter">
+                    <Hash size={10} />
+                    {t}
                   </div>
-                )}
+                ))}
               </div>
             </div>
           </div>
-          <div className="flex gap-2 pt-2 border-t border-border/50">
+
+          <div className="flex items-center gap-2 pt-4 border-t border-border/10">
             <button
-              onClick={handleAccept}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-              title="Accept (a)"
+              onClick={() => onAccept(action)}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-primary/20"
             >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              Accept
+              <Check size={14} />
+              Confirm
             </button>
             <button
               onClick={() => setIsEditing(true)}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-              title="Edit (e)"
+              className="p-2.5 bg-secondary text-secondary-foreground rounded-xl hover:bg-secondary/80 transition-all"
+              title="Edit"
             >
-              <Edit3 className="w-3.5 h-3.5" />
-              Edit
+              <Edit3 size={16} />
             </button>
             <button
               onClick={onReject}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors ml-auto"
-              title="Reject (r)"
+              className="p-2.5 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/5 rounded-xl transition-all"
+              title="Discard"
             >
-              <X className="w-3.5 h-3.5" />
-              Reject
+              <X size={16} />
             </button>
           </div>
         </div>

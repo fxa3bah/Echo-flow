@@ -158,7 +158,7 @@ function App() {
         />
       </aside>
 
-      <div className="flex flex-col flex-1 h-screen overflow-hidden">
+      <div className="flex flex-col flex-1 h-dvh overflow-hidden">
         {/* Header - Mobile Only or common status */}
         <header className="md:hidden sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur px-4 py-3 pt-safe flex items-center justify-between shadow-sm shrink-0">
           <h1 className="text-lg font-bold text-foreground">Echo Flow</h1>
@@ -175,8 +175,8 @@ function App() {
 
         {/* Main Content */}
         <main className={cn(
-          "flex-1 md:pb-0",
-          currentView === 'aiinsights' ? "flex flex-col" : "overflow-auto pb-20"
+          "flex-1 min-h-0",
+          currentView === 'aiinsights' ? "flex flex-col" : "overflow-auto pb-24 md:pb-0"
         )}>
           {currentView === 'home' && (
             <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-2xl">
@@ -193,10 +193,10 @@ function App() {
               {/* Recent Activity Section */}
               <div className="mt-12 space-y-4">
                 <div className="flex items-center justify-between px-2">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Recent Pulse</h3>
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">Recent Pulse</h3>
                   <button
                     onClick={() => setCurrentView('entries')}
-                    className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline"
+                    className="text-[10px] font-bold uppercase tracking-widest text-primary hover:underline"
                   >
                     View All Studio
                   </button>
@@ -246,7 +246,7 @@ const RecentEntriesList = () => {
         >
           <div className="flex items-center justify-between mb-2">
             <span className={cn(
-              "px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest",
+              "px-2 py-0.5 rounded-lg text-[8px] font-bold uppercase tracking-widest",
               entry.type === 'todo' ? "bg-emerald-500/10 text-emerald-600" :
                 entry.type === 'reminder' ? "bg-purple-500/10 text-purple-600" :
                   entry.type === 'diary' ? "bg-orange-500/10 text-orange-600" :

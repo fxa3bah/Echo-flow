@@ -1,16 +1,16 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, MessageSquare, CheckCircle2, Circle, Clock, Tag as TagIcon, StickyNote } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Tag as TagIcon, Plus, Sparkles } from 'lucide-react'
 import { db } from '../lib/db'
-import { formatDate, isSameDay, cn, ensureDate, ensureString } from '../lib/utils'
+import { formatDate, isSameDay, cn, ensureDate, ensureString, stripHtml } from '../lib/utils'
 import type { Entry } from '../types'
 import { TiptapEditor } from './TiptapEditor'
 
 export function DiaryEditor() {
   const [selectedDate, setSelectedDate] = useState(new Date())
-  const [quickAddKey, setQuickAddKey] = useState(0)
+  const [newEntryContent, setNewEntryContent] = useState('')
+  const [editorKey, setEditorKey] = useState(0)
 
-  // Get all entries for selected date from UNIFIED table
   const allDayData = useLiveQuery(async () => {
     const all = await db.entries.toArray()
     return all.filter((e) => {
@@ -19,10 +19,28 @@ export function DiaryEditor() {
     })
   }, [selectedDate])
 
-  // Sort entries by creation time
-  const sortedEntries = allDayData?.sort((a, b) =>
-    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  const sortedEntries = allDayData?.sort((a: Entry, b: Entry) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   ) || []
+
+  const handleCreateNote = async (content: string) => {
+    const trimmed = stripHtml(content).trim()
+    if (!trimmed) return
+
+    const newEntry: Entry = {
+      id: crypto.randomUUID(),
+      type: 'diary',
+      source: 'diary',
+      date: selectedDate,
+      content: content,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      tags: [],
+    }
+    await db.entries.add(newEntry)
+    setNewEntryContent('')
+    setEditorKey(prev => prev + 1)
+  }
 
   const handleDeleteEntry = async (id: string) => {
     if (confirm('Delete this entry?')) {
@@ -39,22 +57,6 @@ export function DiaryEditor() {
 
   const handleToggleTodo = async (id: string, completed: boolean) => {
     await db.entries.update(id, { completed: !completed })
-  }
-
-  const handleCreateNote = async (content: string) => {
-    if (!content.trim() || content === '<p></p>') return
-
-    const newEntry: Entry = {
-      id: crypto.randomUUID(),
-      type: 'diary',
-      source: 'diary',
-      date: selectedDate,
-      content: content,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      tags: [],
-    }
-    await db.entries.add(newEntry)
   }
 
   const goToPreviousDay = () => {
@@ -74,142 +76,162 @@ export function DiaryEditor() {
   }
 
   return (
-    <div className="container mx-auto px-4 max-w-4xl py-8">
-      {/* Header */}
-      <header className="flex flex-col sm:flex-row items-center justify-between mb-12 gap-4">
-        <div className="text-center sm:text-left">
-          <h1 className="text-2xl sm:text-4xl font-bold tracking-tight">{formatDate(selectedDate)}</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Daily Journal</p>
-        </div>
+    <div className="min-h-screen bg-background">
+      {/* Top Background Decoration */}
+      <div className="absolute top-0 left-0 right-0 h-[500px] bg-gradient-to-b from-primary/5 to-transparent -z-10" />
 
-        <div className="flex items-center gap-1 bg-secondary/50 p-1 rounded-xl">
-          <button onClick={goToPreviousDay} className="p-2 hover:bg-background rounded-lg transition-all" title="Previous Day">
-            <ChevronLeft size={20} />
-          </button>
-          <button onClick={goToToday} className="px-4 py-2 text-sm font-medium hover:bg-background rounded-lg transition-all">
-            Today
-          </button>
-          <button onClick={goToNextDay} className="p-2 hover:bg-background rounded-lg transition-all" title="Next Day">
-            <ChevronRight size={20} />
-          </button>
-        </div>
-      </header>
-
-      {/* Unified Journal Feed */}
-      <div className="space-y-8 mb-40 min-h-[50vh] relative pl-4">
-        {sortedEntries.length === 0 ? (
-          <div className="text-center py-20 border-2 border-dashed border-border rounded-2xl text-muted-foreground sm:ml-8">
-            <p>No entries for this day yet.</p>
-            <p className="text-sm mt-1">Record a note or start typing below.</p>
+      <div className="container mx-auto px-6 max-w-3xl py-12 sm:py-24 animate-in fade-in duration-700">
+        {/* Navigation & Date */}
+        <header className="flex flex-col items-center text-center space-y-10 mb-20 sm:mb-32">
+          <div className="flex items-center gap-1 bg-muted/50 p-1.5 rounded-2xl border border-border/50 backdrop-blur-sm shadow-sm ring-1 ring-black/5 dark:ring-white/5">
+            <button onClick={goToPreviousDay} className="p-2.5 hover:bg-background rounded-xl transition-all active:scale-90" title="Previous Day">
+              <ChevronLeft size={18} className="text-muted-foreground" />
+            </button>
+            <button onClick={goToToday} className="px-5 py-2 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-background rounded-xl transition-all active:scale-95 text-muted-foreground hover:text-foreground">
+              {isSameDay(selectedDate, new Date()) ? 'Today' : 'Back to Today'}
+            </button>
+            <button onClick={goToNextDay} className="p-2.5 hover:bg-background rounded-xl transition-all active:scale-90" title="Next Day">
+              <ChevronRight size={18} className="text-muted-foreground" />
+            </button>
           </div>
-        ) : (
-          sortedEntries.map((entry) => (
-            <div key={entry.id} className="journal-item group relative">
-              <div className="flex items-start gap-6">
-                <div className="mt-1 flex-shrink-0 z-10 bg-background p-1 -ml-1">
-                  {entry.type === 'voice' && <MessageSquare size={16} className="text-blue-500" />}
-                  {entry.type === 'todo' && (
-                    <button onClick={() => handleToggleTodo(entry.id, entry.completed || false)}>
-                      {entry.completed ? (
-                        <CheckCircle2 size={16} className="text-green-500" />
-                      ) : (
-                        <Circle size={16} className="text-muted-foreground group-hover:text-primary transition-colors" />
-                      )}
-                    </button>
-                  )}
-                  {entry.type === 'reminder' && <Clock size={16} className="text-purple-500" />}
-                  {entry.type === 'diary' && <StickyNote size={16} className="text-orange-500" />}
-                </div>
 
-                <div className="flex-1 min-w-0 pr-8">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="journal-timestamp">
-                      {new Date(entry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    {entry.source === 'voice' && <span className="text-[10px] text-blue-500/50 font-bold uppercase tracking-wider">Voice</span>}
-                  </div>
+          <div className="space-y-4">
+            <h1 className="text-5xl sm:text-8xl font-black tracking-tighter text-foreground leading-[0.8] drop-shadow-sm">
+              {formatDate(selectedDate)}
+            </h1>
+            <p className="text-[10px] sm:text-xs font-black uppercase tracking-[0.5em] text-muted-foreground/40 ml-1">
+              Personal Chronicle
+            </p>
+          </div>
+        </header>
 
-                  {entry.type === 'diary' ? (
-                    <div className="space-y-1">
-                      {entry.title && (
-                        <p className="text-base sm:text-lg leading-tight font-black text-foreground mb-1.5">
-                          {entry.title}
-                        </p>
-                      )}
-                      <TiptapEditor
-                        content={ensureString(entry.content)}
-                        onChange={(val) => handleUpdateContent(entry.id, val)}
-                        placeholder="Captured thought..."
-                      />
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <div className={cn(
-                        "text-sm sm:text-base leading-tight font-bold text-foreground tracking-tight",
-                        entry.completed && "line-through text-muted-foreground/30"
-                      )}>
-                        {entry.title ? (
-                          entry.title
-                        ) : (
-                          <div dangerouslySetInnerHTML={{ __html: ensureString(entry.content) }} className="prose prose-sm dark:prose-invert max-w-none inline" />
-                        )}
-                      </div>
-                      {entry.title && entry.content &&
-                        entry.content.toLowerCase().trim() !== entry.title.toLowerCase().trim() && (
-                          <div className={cn(
-                            "text-xs font-normal text-muted-foreground/70 leading-relaxed tracking-tight",
-                            entry.completed && "line-through opacity-30"
-                          )}>
-                            <div dangerouslySetInnerHTML={{ __html: ensureString(entry.content) }} className="prose prose-sm dark:prose-invert max-w-none" />
-                          </div>
-                        )}
-                    </div>
-                  )}
+        {/* Main Interaction Area - Premium Top-Down Flow */}
+        <div className="space-y-24">
+          {/* New Entry Capture Card */}
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-transparent to-primary/20 rounded-[42px] blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-1000" />
+            <div className="relative bg-card/60 backdrop-blur-xl border border-border/50 rounded-[40px] p-6 sm:p-10 shadow-2xl shadow-black/5 dark:shadow-white/5 transition-all focus-within:shadow-primary/5 focus-within:-translate-y-1">
+              <div className="flex items-center gap-3 mb-8 text-primary">
+                <Sparkles size={18} />
+                <span className="text-[10px] font-black uppercase tracking-[0.3em]">Capture your first thought...</span>
+              </div>
 
-                  {entry.tags && entry.tags.length > 0 && (
-                    <div className="flex gap-2 mt-2">
-                      {entry.tags.map(tag => (
-                        <span key={tag} className="flex items-center gap-1 text-[10px] px-2 py-0.5 bg-secondary text-secondary-foreground rounded-md opacity-70">
-                          <TagIcon size={8} />
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              <div className="min-h-[120px]">
+                <TiptapEditor
+                  key={editorKey}
+                  content={newEntryContent}
+                  onChange={setNewEntryContent}
+                  onEnter={handleCreateNote}
+                  placeholder="Start typing your day..."
+                />
+              </div>
 
+              <div className="flex justify-between items-center mt-8 pt-8 border-t border-border/10">
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">
+                  {sortedEntries.length} items logged today
+                </p>
                 <button
-                  onClick={() => handleDeleteEntry(entry.id)}
-                  className="absolute right-0 top-0 p-2 text-muted-foreground/0 group-hover:text-destructive/30 hover:text-destructive transition-all rounded-md"
-                  title="Delete entry"
+                  onClick={() => handleCreateNote(newEntryContent)}
+                  className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
                 >
-                  <TagIcon size={14} className="rotate-45" />
+                  <Plus size={14} />
+                  Log Entry
                 </button>
               </div>
             </div>
-          ))
-        )}
-      </div>
+          </div>
 
-      {/* Quick Add Entry Box */}
-      <div className="fixed bottom-[84px] md:bottom-10 left-1/2 -translate-x-1/2 w-full max-w-xl px-4 z-40 pb-safe">
-        <div className="bg-background/95 backdrop-blur-xl border border-border/50 shadow-[0_8px_32px_rgba(0,0,0,0.1)] rounded-3xl p-3 sm:p-4 ring-1 ring-black/5 dark:ring-white/5 transition-all focus-within:shadow-[0_8px_48px_rgba(0,0,0,0.2)]">
-          <TiptapEditor
-            key={quickAddKey}
-            content=""
-            onChange={() => { }}
-            onEnter={(val) => {
-              handleCreateNote(val)
-              setQuickAddKey(p => p + 1)
-            }}
-            placeholder="Write a new block..."
-          />
-          <div className="flex justify-between items-center mt-2 px-1 border-t border-border/30 pt-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Quick Add</span>
-            </div>
-            <span className="text-[10px] text-muted-foreground/50 italic">Enter to log</span>
+          {/* Timeline Feed */}
+          <div className="space-y-20 relative">
+            {sortedEntries.length > 0 && (
+              <div className="absolute left-1/2 -ml-[1px] top-4 bottom-20 w-[2px] bg-gradient-to-b from-border/50 via-border to-transparent -z-10" />
+            )}
+
+            {sortedEntries.map((entry: Entry, idx: number) => (
+              <div key={entry.id} className="group relative flex flex-col items-center">
+                {/* Visual Anchor */}
+                <div className="w-4 h-4 rounded-full bg-background border-4 border-border/80 group-hover:border-primary transition-all duration-500 z-10 mb-8" />
+
+                <div className="w-full space-y-4">
+                  <div className="flex flex-col items-center text-center gap-3">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 bg-muted/30 px-3 py-1 rounded-full">
+                      {new Date(entry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+
+                    <div className="w-full max-w-xl space-y-4 px-4">
+                      {entry.type === 'diary' ? (
+                        <div className="space-y-4">
+                          {entry.title && (
+                            <h2 className="text-3xl sm:text-5xl font-black text-foreground tracking-tighter leading-[0.9]">
+                              {stripHtml(entry.title)}
+                            </h2>
+                          )}
+                          <div className="prose prose-base sm:prose-lg dark:prose-invert max-w-none text-center prose-p:leading-relaxed prose-p:text-foreground/80">
+                            <TiptapEditor
+                              content={ensureString(entry.content)}
+                              onChange={(val) => handleUpdateContent(entry.id, val)}
+                              placeholder="..."
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className={cn(
+                            "text-2xl sm:text-4xl leading-[0.9] font-black tracking-tighter text-foreground px-4",
+                            entry.completed && "line-through text-muted-foreground/20"
+                          )}>
+                            {entry.title ? (
+                              stripHtml(entry.title)
+                            ) : (
+                              <div dangerouslySetInnerHTML={{ __html: ensureString(entry.content) }} className="prose prose-base sm:prose-lg dark:prose-invert max-w-none inline" />
+                            )}
+                          </div>
+
+                          {entry.type === 'todo' && (
+                            <button
+                              onClick={() => handleToggleTodo(entry.id, entry.completed || false)}
+                              className={cn(
+                                "mx-auto px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] border transition-all active:scale-95 inline-flex items-center gap-3",
+                                entry.completed
+                                  ? "bg-emerald-500 text-white border-transparent shadow-xl shadow-emerald-500/20"
+                                  : "bg-background border-border hover:border-primary/50 text-muted-foreground/60 hover:text-primary"
+                              )}
+                            >
+                              {entry.completed ? 'Achieved' : 'Mark as Achieved'}
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Entry Tags & Delete */}
+                      <div className="flex flex-col items-center gap-6 pt-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        {entry.tags && entry.tags.length > 0 && (
+                          <div className="flex gap-2 flex-wrap justify-center">
+                            {entry.tags.map((tag: string) => (
+                              <span key={tag} className="flex items-center gap-1.5 text-[8px] px-3 py-1 bg-secondary/50 text-muted-foreground/60 border border-border/30 rounded-lg font-black uppercase tracking-widest">
+                                <TagIcon size={8} />
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <button
+                          onClick={() => handleDeleteEntry(entry.id)}
+                          className="px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-destructive/40 hover:text-destructive transition-all"
+                        >
+                          Discard Record
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vertical Step Divider */}
+                {idx !== sortedEntries.length - 1 && (
+                  <div className="h-20 w-[1px] bg-border/20 mt-8" />
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>

@@ -44,7 +44,7 @@ export function TiptapEditor({ content, onChange, onEnter, onFocus, placeholder 
                 return false
             },
             attributes: {
-                class: 'logseq-editor prose prose-sm dark:prose-invert max-w-none focus:outline-none',
+                class: 'logseq-editor prose prose-base dark:prose-invert max-w-none focus:outline-none min-h-[1.5em]',
             },
         },
     })

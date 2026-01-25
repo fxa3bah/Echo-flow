@@ -1,5 +1,5 @@
 import { db } from '../lib/db'
-import { startOfDay, endOfDay } from '../lib/utils'
+import { startOfDay, endOfDay, ensureDate } from '../lib/utils'
 import type { Priority, EntryType } from '../types'
 
 export interface AIAction {
@@ -149,90 +149,65 @@ export async function applyAIActions(actions: AIAction[], fallbackDate = new Dat
   return { created, updated, diaryUpdated }
 }
 
-export async function buildAIContextSummary(date = new Date()): Promise<string> {
-  const start = startOfDay(date)
-  const end = endOfDay(date)
+export async function buildAIContextSummary(): Promise<string> {
   const now = new Date()
+  const todayStart = startOfDay(now)
+  const todayEnd = endOfDay(now)
+  const tomorrowStart = new Date(todayStart)
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1)
+  const tomorrowEnd = endOfDay(tomorrowStart)
 
-  // Get all incomplete todos and reminders for focus context
+  // Get all incomplete todos and reminders
   const allIncompleteItems = await db.entries
     .filter((entry) => (entry.type === 'todo' || entry.type === 'reminder') && !entry.completed)
     .toArray()
 
-  // Categorize by time horizon (matching Focus View logic)
-  const doNowItems = allIncompleteItems.filter((entry) => {
-    const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date)
-    const hoursDiff = (entryDate.getTime() - now.getTime()) / (1000 * 60 * 60)
-    return hoursDiff >= -24 && hoursDiff <= 24
+  const todayItems = allIncompleteItems.filter((entry) => {
+    const d = ensureDate(entry.date)
+    return d && d >= todayStart && d <= todayEnd
+  })
+
+  const tomorrowItems = allIncompleteItems.filter((entry) => {
+    const d = ensureDate(entry.date)
+    return d && d >= tomorrowStart && d <= tomorrowEnd
   })
 
   const thisWeekItems = allIncompleteItems.filter((entry) => {
-    const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date)
-    const daysDiff = (entryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    return daysDiff > 1 && daysDiff <= 7
+    const d = ensureDate(entry.date)
+    return d && d > tomorrowEnd && d <= new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
   })
 
-  const laterItems = allIncompleteItems.filter((entry) => {
-    const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date)
-    if (!entryDate) return true
-    const daysDiff = (entryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    return daysDiff > 7
+  const overdueItems = allIncompleteItems.filter((entry) => {
+    const d = ensureDate(entry.date)
+    return d && d < todayStart
   })
 
-  // Get today's entries for additional context
-  const todayEntries = await db.entries
-    .where('date')
-    .between(start, end, true, true)
-    .toArray()
-
-  const diaryEntries = todayEntries.filter(e => e.type === 'diary')
   const sections: string[] = []
 
-  // PRIORITY: Show Do Now items first (most important for AI to know)
-  if (doNowItems.length > 0) {
-    sections.push('🔥 DO NOW (Next 24 hours) - URGENT:')
-    doNowItems.forEach((entry) => {
-      const title = entry.title || entry.content.slice(0, 50)
-      const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date)
-      const timeStr = entryDate.toLocaleString()
-      sections.push(`  • [${entry.type}] ${title} (due: ${timeStr})`)
-    })
+  if (overdueItems.length > 0) {
+    sections.push('🔴 OVERDUE TASKS:')
+    overdueItems.forEach((e) => sections.push(`  • [${e.type}] ${e.title || e.content.slice(0, 50)} (was due: ${ensureDate(e.date)?.toLocaleDateString()})`))
     sections.push('')
   }
 
-  // Show This Week items
+  if (todayItems.length > 0) {
+    sections.push('🔥 DUE TODAY:')
+    todayItems.forEach((e) => sections.push(`  • [${e.type}] ${e.title || e.content.slice(0, 50)} (at: ${ensureDate(e.date)?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`))
+  } else {
+    sections.push('✅ NOTHING DUE TODAY.')
+  }
+  sections.push('')
+
+  if (tomorrowItems.length > 0) {
+    sections.push('📅 DUE TOMORROW:')
+    tomorrowItems.forEach((e) => sections.push(`  • [${e.type}] ${e.title || e.content.slice(0, 50)} (at: ${ensureDate(e.date)?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`))
+    sections.push('')
+  }
+
   if (thisWeekItems.length > 0) {
-    sections.push('📅 THIS WEEK (Next 7 days):')
-    thisWeekItems.forEach((entry) => {
-      const title = entry.title || entry.content.slice(0, 50)
-      const entryDate = entry.date instanceof Date ? entry.date : new Date(entry.date)
-      sections.push(`  • [${entry.type}] ${title} (due: ${entryDate.toLocaleDateString()})`)
-    })
+    sections.push('🔜 UPCOMING THIS WEEK:')
+    thisWeekItems.forEach((e) => sections.push(`  • [${e.type}] ${e.title || e.content.slice(0, 50)} (on: ${ensureDate(e.date)?.toLocaleDateString()})`))
     sections.push('')
-  }
-
-  // Show Later items (backlog)
-  if (laterItems.length > 0) {
-    sections.push('🌙 LATER (Backlog):')
-    laterItems.forEach((entry) => {
-      const title = entry.title || entry.content.slice(0, 50)
-      sections.push(`  • [${entry.type}] ${title}`)
-    })
-    sections.push('')
-  }
-
-  // If no tasks at all
-  if (allIncompleteItems.length === 0) {
-    sections.push('✅ No pending tasks or reminders!')
-    sections.push('')
-  }
-
-  // Show today's diary entries for context
-  if (diaryEntries.length > 0) {
-    sections.push('📔 Today\'s Notes:')
-    diaryEntries.forEach((entry) => {
-      sections.push(`${entry.content.slice(0, 200)}${entry.content.length > 200 ? '...' : ''}`)
-    })
   }
 
   return sections.join('\n')

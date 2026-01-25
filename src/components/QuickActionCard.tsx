@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Sparkles, PenTool, CheckCircle2, Send, Loader2, Mic, MicOff, Trash2 } from 'lucide-react'
+import { Sparkles, PenTool, CheckCircle2, Send, Mic, MicOff, Trash2 } from 'lucide-react'
 import { TiptapEditor } from './TiptapEditor'
 import { db } from '../lib/db'
 import { cn, stripHtml } from '../lib/utils'
@@ -18,7 +18,6 @@ export function QuickActionCard() {
         input,
         setInput,
         isLoading,
-        actionsCreated,
         isListening,
         handleVoiceToggle,
         handleSend,
@@ -98,146 +97,166 @@ export function QuickActionCard() {
 
             {/* Tab Content */}
             <div className="p-6 md:p-8">
-                {activeTab === 'ai' ? (
-                    <div className="flex flex-col h-[350px] sm:h-[450px]">
-                        {/* Mini Chat Feed */}
-                        <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
-                            {messages.map((message, index) => (
-                                <div key={index} className="space-y-2">
-                                    <div className={cn(
-                                        "rounded-2xl p-4 text-sm font-medium leading-relaxed",
-                                        message.role === 'user'
-                                            ? "bg-primary text-primary-foreground ml-8"
-                                            : "bg-muted/50 border border-border/50 mr-8 text-foreground/90"
-                                    )}>
-                                        {message.role === 'assistant' ? (
-                                            <div
-                                                className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1"
-                                                dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
-                                            />
-                                        ) : (
-                                            <p>{message.content}</p>
+                <div className="h-[400px] sm:h-[480px]">
+                    {activeTab === 'ai' ? (
+                        <div className="flex flex-col h-full animate-in fade-in duration-500">
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <h3 className="text-3xl font-black tracking-tighter">AI Studio</h3>
+                                    <p className="text-[10px] sm:text-xs font-black text-muted-foreground/40 uppercase tracking-[0.3em] mt-1">Intelligent thought processor</p>
+                                </div>
+                                <div className="flex items-center gap-2 text-primary/60 bg-primary/5 px-3 py-1.5 rounded-full border border-primary/10">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Live Engine</span>
+                                </div>
+                            </div>
+
+                            {/* Mini Chat Feed */}
+                            <div className="flex-1 overflow-y-auto space-y-4 mb-6 pr-2 scrollbar-none">
+                                {messages.map((message, index) => (
+                                    <div key={index} className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                        <div className={cn(
+                                            "rounded-[24px] p-5 text-sm font-medium leading-[1.6]",
+                                            message.role === 'user'
+                                                ? "bg-primary text-primary-foreground ml-12 shadow-lg shadow-primary/10"
+                                                : "bg-muted/30 border border-border/40 mr-12 text-foreground/80 backdrop-blur-sm"
+                                        )}>
+                                            {message.role === 'assistant' ? (
+                                                <div
+                                                    className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1"
+                                                    dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
+                                                />
+                                            ) : (
+                                                <p>{message.content}</p>
+                                            )}
+                                        </div>
+
+                                        {/* Actions In-place */}
+                                        {message.pendingActions && message.pendingActions.length > 0 && (
+                                            <div className="space-y-3 mr-12">
+                                                <div className="flex items-center justify-between px-1">
+                                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40"> Review Actions </span>
+                                                    {message.pendingActions.filter((_, i) => !message.rejectedActionIndices?.includes(i)).length > 1 && (
+                                                        <button
+                                                            onClick={() => handleAcceptAll(index)}
+                                                            className="text-[9px] px-3 py-1 font-black bg-emerald-500 text-white rounded-full uppercase tracking-widest hover:brightness-110 shadow-lg shadow-emerald-500/20"
+                                                        >
+                                                            Commit All
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                {message.pendingActions.map((action, actionIdx) => (
+                                                    <div key={actionIdx} className="bg-background/40 backdrop-blur-md border border-border/50 rounded-[28px] p-5 shadow-sm transition-all hover:border-primary/30">
+                                                        <div className="flex items-center justify-between mb-3">
+                                                            <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest leading-none border border-primary/20">
+                                                                {action.type}
+                                                            </span>
+                                                            <div className="flex gap-1.5">
+                                                                <button onClick={() => handleAcceptAction(index, actionIdx, action)} className="p-2 hover:bg-emerald-500/10 text-emerald-500 rounded-full transition-all active:scale-90">
+                                                                    <CheckCircle2 size={16} />
+                                                                </button>
+                                                                <button onClick={() => handleRejectAction(index, actionIdx)} className="p-2 hover:bg-destructive/10 text-destructive rounded-full transition-all active:scale-90">
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <div className="font-black text-sm text-foreground tracking-tight">{stripHtml(action.title)}</div>
+                                                        {action.content && <div className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{stripHtml(action.content)}</div>}
+                                                    </div>
+                                                ))}
+                                            </div>
                                         )}
                                     </div>
-
-                                    {/* Actions In-place */}
-                                    {message.pendingActions && message.pendingActions.length > 0 && (
-                                        <div className="space-y-2 mr-8">
-                                            <div className="flex items-center justify-between px-1">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
-                                                    Review required
-                                                </span>
-                                                {message.pendingActions.filter((_, i) => !message.rejectedActionIndices?.includes(i)).length > 1 && (
-                                                    <button
-                                                        onClick={() => handleAcceptAll(index)}
-                                                        className="text-[9px] px-2 py-1 font-black bg-emerald-500/10 text-emerald-600 rounded-lg uppercase tracking-widest hover:bg-emerald-500/20"
-                                                    >
-                                                        Accept All
-                                                    </button>
-                                                )}
-                                            </div>
-                                            {message.pendingActions.map((action, actionIdx) => (
-                                                <div key={actionIdx} className="bg-background/80 border border-border/50 rounded-2xl p-4 shadow-sm">
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <span className="px-2 py-0.5 rounded-lg bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest leading-none">
-                                                            {action.type}
-                                                        </span>
-                                                        <div className="flex gap-2">
-                                                            <button onClick={() => handleAcceptAction(index, actionIdx, action)} className="p-1.5 hover:bg-emerald-500/10 text-emerald-600 rounded-lg transition-colors">
-                                                                <CheckCircle2 size={14} />
-                                                            </button>
-                                                            <button onClick={() => handleRejectAction(index, actionIdx)} className="p-1.5 hover:bg-destructive/10 text-destructive rounded-lg transition-colors">
-                                                                <Trash2 size={14} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    <div className="font-black text-sm text-foreground">{stripHtml(action.title)}</div>
-                                                    {action.content && <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{stripHtml(action.content)}</div>}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                            {isLoading && (
-                                <div className="bg-muted/50 border border-border/50 rounded-2xl p-4 mr-8 animate-pulse">
-                                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                                </div>
-                            )}
-                            {actionsCreated > 0 && (
-                                <div className="flex items-center gap-2 text-[10px] font-black text-emerald-500 uppercase tracking-widest px-1">
-                                    <CheckCircle2 size={12} />
-                                    {actionsCreated} item{actionsCreated > 1 ? 's' : ''} pushed to system
-                                </div>
-                            )}
-                            <div ref={messagesEndRef} />
-                        </div>
-
-                        {/* Input Area */}
-                        <div className="flex gap-2 bg-background/50 p-2 rounded-2xl sm:rounded-[28px] border border-border/50 shadow-inner focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-                            <button
-                                onClick={handleVoiceToggle}
-                                className={cn(
-                                    "p-3 rounded-2xl transition-all",
-                                    isListening ? "bg-destructive text-destructive-foreground" : "text-muted-foreground hover:bg-muted"
+                                ))}
+                                {isLoading && (
+                                    <div className="bg-muted/20 border border-border/20 rounded-[24px] p-5 mr-12 animate-pulse flex items-center gap-3">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce shadow-primary/50" />
+                                        <span className="text-xs font-black text-primary/40 uppercase tracking-widest">Analyzing</span>
+                                    </div>
                                 )}
-                            >
-                                {isListening ? <MicOff size={18} /> : <Mic size={18} />}
-                            </button>
-                            <input
-                                type="text"
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                                placeholder="Ask AI anything..."
-                                className="flex-1 bg-transparent border-none text-sm font-bold focus:ring-0 outline-none px-2"
-                            />
-                            <button
-                                onClick={handleSend}
-                                disabled={!input.trim() || isLoading}
-                                className="p-3 bg-primary text-primary-foreground rounded-2xl shadow-lg shadow-primary/25 hover:shadow-primary/40 active:scale-95 transition-all disabled:opacity-50"
-                            >
-                                <Send size={18} />
-                            </button>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="space-y-6">
-                        <div className="flex items-center justify-between mb-2">
-                            <div>
-                                <h3 className="text-2xl font-black tracking-tight">Expressive Diary</h3>
-                                <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest mt-1">Logged to today's journal</p>
+                                <div ref={messagesEndRef} />
                             </div>
-                            {isSaved && (
-                                <div className="flex items-center gap-2 text-emerald-500 animate-in fade-in slide-in-from-right-2">
-                                    <CheckCircle2 size={16} />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Thought Captured</span>
+
+                            {/* AI Input Area */}
+                            <div className="mt-auto pt-6 border-t border-border/10 space-y-4">
+                                <div className="flex items-center gap-3 px-4">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                                    <span className="text-[10px] font-black tracking-[0.2em] text-muted-foreground/40 uppercase">Intelligence Connection Active</span>
                                 </div>
-                            )}
-                        </div>
-                        <div className="bg-background/50 border border-border/30 rounded-[32px] p-6 focus-within:ring-2 focus-within:ring-primary/20 transition-all shadow-inner min-h-[160px] flex flex-col">
-                            <TiptapEditor
-                                key={editorKey}
-                                content={diaryContent}
-                                onChange={setDiaryContent}
-                                onEnter={handleSaveDiary}
-                                placeholder="Unfiltered thoughts... (Press Enter to log forever)"
-                            />
-                        </div>
-                        <div className="flex items-center justify-between px-2">
-                            <div className="flex items-center gap-3">
-                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="text-[10px] font-black tracking-widest text-muted-foreground uppercase">Real-time Sync Active</span>
+                                <div className="flex gap-2 bg-background/50 p-2.5 rounded-[32px] border border-border/50 shadow-inner focus-within:ring-2 focus-within:ring-primary/20 transition-all backdrop-blur-sm group">
+                                    <button
+                                        onClick={handleVoiceToggle}
+                                        className={cn(
+                                            "p-3.5 rounded-2xl transition-all shadow-sm",
+                                            isListening ? "bg-destructive text-destructive-foreground shadow-destructive/20 scale-105" : "text-muted-foreground hover:bg-muted"
+                                        )}
+                                    >
+                                        {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+                                    </button>
+                                    <input
+                                        type="text"
+                                        value={input}
+                                        onChange={(e) => setInput(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                                        placeholder="Command your digital shadow..."
+                                        className="flex-1 bg-transparent border-none text-base font-bold focus:ring-0 outline-none px-3 text-foreground"
+                                    />
+                                    <button
+                                        onClick={handleSend}
+                                        disabled={!input.trim() || isLoading}
+                                        className="p-3.5 bg-primary text-primary-foreground rounded-2xl shadow-xl shadow-primary/25 hover:shadow-primary/40 active:scale-95 transition-all disabled:opacity-50"
+                                    >
+                                        <Send size={20} />
+                                    </button>
+                                </div>
                             </div>
-                            <button
-                                onClick={() => handleSaveDiary(diaryContent)}
-                                className="text-[10px] font-black uppercase tracking-widest bg-primary/10 text-primary px-4 py-2 rounded-xl hover:bg-primary/20 transition-all"
-                            >
-                                Log Entry
-                            </button>
                         </div>
-                    </div>
-                )}
+                    ) : (
+                        <div className="flex flex-col h-full">
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <h3 className="text-3xl font-black tracking-tighter">Expressive Diary</h3>
+                                    <p className="text-[10px] sm:text-xs font-black text-muted-foreground/40 uppercase tracking-[0.3em] mt-1 space-x-1">
+                                        <span>Logged to today's journal</span>
+                                    </p>
+                                </div>
+                                {isSaved && (
+                                    <div className="flex items-center gap-2 text-emerald-500 animate-in fade-in slide-in-from-right-4 duration-500">
+                                        <div className="bg-emerald-500/10 p-1.5 rounded-lg border border-emerald-500/20 shadow-sm">
+                                            <CheckCircle2 size={16} />
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Memory Saved</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex-1 bg-background/50 border border-border/30 rounded-[40px] p-8 focus-within:ring-2 focus-within:ring-primary/20 transition-all shadow-inner flex flex-col group/editor">
+                                <div className="flex-1 min-h-[120px]">
+                                    <TiptapEditor
+                                        key={editorKey}
+                                        content={diaryContent}
+                                        onChange={setDiaryContent}
+                                        onEnter={handleSaveDiary}
+                                        placeholder="Unfiltered thoughts... (Press Enter to log)"
+                                    />
+                                </div>
+
+                                <div className="mt-8 flex items-center justify-between pt-6 border-t border-border/10">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                                        <span className="text-[10px] font-black tracking-[0.2em] text-muted-foreground/40 uppercase">Intelligence Sync Active</span>
+                                    </div>
+                                    <button
+                                        onClick={() => handleSaveDiary(diaryContent)}
+                                        className="text-[10px] font-black uppercase tracking-[0.2em] bg-primary text-primary-foreground px-6 py-3 rounded-2xl shadow-xl shadow-primary/10 hover:scale-105 active:scale-95 transition-all"
+                                    >
+                                        Log Entry
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     )

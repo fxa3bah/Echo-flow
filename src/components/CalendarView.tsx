@@ -1,25 +1,16 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, StickyNote, Trash2, Calendar as CalendarIcon } from 'lucide-react'
 import { useState } from 'react'
-import { marked } from 'marked'
 import { db } from '../lib/db'
 import { formatDate, isSameDay, startOfDay, endOfDay, cn, ensureDate, ensureString, stripHtml } from '../lib/utils'
-import type { Entry, EntryType } from '../types'
-
-const entryTypeColors: Partial<Record<EntryType, string>> = {
-  journal: 'border-l-blue-500',
-  todo: 'border-l-green-500',
-  reminder: 'border-l-yellow-500',
-  note: 'border-l-purple-500',
-  voice: 'border-l-gray-400',
-  diary: 'border-l-indigo-500',
-}
+import type { Entry } from '../types'
+import { TiptapEditor } from './TiptapEditor'
 
 export function CalendarView() {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [currentMonth, setCurrentMonth] = useState(new Date())
-  const [newNoteTitle, setNewNoteTitle] = useState('')
   const [newNoteContent, setNewNoteContent] = useState('')
+  const [editorKey, setEditorKey] = useState(0)
 
   // Get all entries for selected date from UNIFIED table
   const allDayEntries = useLiveQuery(async () => {
@@ -31,12 +22,11 @@ export function CalendarView() {
       .toArray()
   }, [selectedDate])
 
-  // Separate entries by type for display
-  const entries = allDayEntries?.filter((e) => e.type !== 'diary' && e.type !== 'voice') || []
-  const voiceEntries = allDayEntries?.filter((e) => e.type === 'voice') || []
-  const diaryEntry = allDayEntries?.find((e) => e.type === 'diary')
+  const sortedEntries = allDayEntries?.sort((a: Entry, b: Entry) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  ) || []
 
-  // Get all entries for the current month to show indicators (UNIFIED table only)
+  // Get all entries for the current month to show indicators
   const monthEntries = useLiveQuery(async () => {
     const start = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
     const end = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0, 23, 59, 59)
@@ -54,7 +44,7 @@ export function CalendarView() {
   }
 
   const handleDeleteEntry = async (id: string) => {
-    if (confirm('Are you sure you want to delete this entry?')) {
+    if (confirm('Permanently delete this record?')) {
       await db.entries.delete(id)
     }
   }
@@ -68,17 +58,8 @@ export function CalendarView() {
     const startingDayOfWeek = firstDay.getDay()
 
     const days: (Date | null)[] = []
-
-    // Add empty cells for days before the month starts
-    for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(null)
-    }
-
-    // Add actual days
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push(new Date(year, month, i))
-    }
-
+    for (let i = 0; i < startingDayOfWeek; i++) days.push(null)
+    for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i))
     return days
   }
 
@@ -105,258 +86,235 @@ export function CalendarView() {
     setSelectedDate(today)
   }
 
-  const days = getDaysInMonth(currentMonth)
-  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const handleAddNote = async (content: string) => {
+    const trimmed = stripHtml(content).trim()
+    if (!trimmed) return
 
-  const renderDiaryHtml = (entry: Entry) =>
-    marked.parse(ensureString(entry.content), { async: false })
-
-  const handleAddNote = async () => {
-    const content = newNoteContent.trim()
-    if (!content) return
-
-    const title = newNoteTitle.trim() || content.slice(0, 40)
     await db.entries.add({
       id: crypto.randomUUID(),
       type: 'note',
       source: 'manual',
-      title,
-      content,
+      title: trimmed.slice(0, 50),
+      content: content,
       date: selectedDate,
       createdAt: new Date(),
       updatedAt: new Date(),
       tags: [],
       linkedEntryIds: [],
     })
-    setNewNoteTitle('')
     setNewNoteContent('')
+    setEditorKey(prev => prev + 1)
   }
 
+  const days = getDaysInMonth(currentMonth)
+  const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-6xl">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8">
-        {/* Calendar */}
-        <div>
-          <div className="flex items-start sm:items-center justify-between mb-4 gap-2 flex-wrap">
-            <h2 className="text-lg sm:text-2xl font-bold flex-1 min-w-0">
-              {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-            </h2>
-            <div className="flex gap-1.5 sm:gap-2 flex-shrink-0">
-              <button
-                onClick={goToToday}
-                className="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors min-h-[36px] sm:min-h-[40px]"
-              >
-                Today
-              </button>
-              <button
-                onClick={goToPreviousMonth}
-                className="p-1.5 hover:bg-accent rounded transition-colors min-h-[36px] min-w-[36px] sm:min-h-[40px] sm:min-w-[40px] flex items-center justify-center"
-                aria-label="Previous month"
-              >
-                <ChevronLeft size={18} className="sm:w-5 sm:h-5" />
-              </button>
-              <button
-                onClick={goToNextMonth}
-                className="p-1.5 hover:bg-accent rounded transition-colors min-h-[36px] min-w-[36px] sm:min-h-[40px] sm:min-w-[40px] flex items-center justify-center"
-                aria-label="Next month"
-              >
-                <ChevronRight size={18} className="sm:w-5 sm:h-5" />
-              </button>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-4 sm:py-8 max-w-[1200px]">
+        {/* Modern Split Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-8 items-start">
+
+          {/* LEFT: The Navigator (Sticky on Desktop) */}
+          <aside className="lg:sticky lg:top-8 space-y-4 animate-in slide-in-from-left duration-700">
+            <div className="px-1">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.4em] text-primary/60">Perspective Search</span>
+              <h1 className="text-3xl font-bold tracking-tighter text-foreground mt-1">Chronicle</h1>
             </div>
-          </div>
 
-          <div className="grid grid-cols-7 gap-1 sm:gap-2">
-            {/* Week day headers */}
-            {weekDays.map((day) => (
-              <div key={day} className="text-center text-xs sm:text-sm font-medium text-muted-foreground py-1 sm:py-2">
-                {day}
-              </div>
-            ))}
-
-            {/* Calendar days */}
-            {days.map((day, index) => {
-              if (!day) {
-                return <div key={`empty-${index}`} className="aspect-square" />
-              }
-
-              const isSelected = isSameDay(day, selectedDate)
-              const isToday = isSameDay(day, new Date())
-              const hasEntries = hasEntriesOnDate(day)
-
-              return (
-                <button
-                  key={day.toISOString()}
-                  onClick={() => setSelectedDate(day)}
-                  className={cn(
-                    'aspect-square flex flex-col items-center justify-center rounded-lg transition-colors relative min-h-[44px]',
-                    'hover:bg-accent',
-                    isSelected && 'bg-primary text-primary-foreground hover:bg-primary/90',
-                    isToday && !isSelected && 'ring-2 ring-primary'
-                  )}
-                >
-                  <span className="text-xs sm:text-sm font-medium">{day.getDate()}</span>
-                  {hasEntries && (
-                    <div className="absolute bottom-1 w-1 h-1 rounded-full bg-current" />
-                  )}
+            <div className="bg-card/40 backdrop-blur-xl border border-border/40 rounded-[32px] p-5 shadow-2xl shadow-black/5 dark:shadow-white/5 ring-1 ring-black/5 dark:ring-white/5">
+              {/* Month Selector */}
+              <div className="flex items-center justify-between mb-6 px-1">
+                <button onClick={goToPreviousMonth} className="p-2 hover:bg-muted rounded-full transition-all text-muted-foreground">
+                  <ChevronLeft size={16} />
                 </button>
-              )
-            })}
-          </div>
-        </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/30 mb-0.5">{currentMonth.getFullYear()}</span>
+                  <span className="text-lg font-bold tracking-tight">{currentMonth.toLocaleDateString('en-US', { month: 'long' })}</span>
+                </div>
+                <button onClick={goToNextMonth} className="p-2 hover:bg-muted rounded-full transition-all text-muted-foreground">
+                  <ChevronRight size={16} />
+                </button>
+              </div>
 
-        {/* Daily View */}
-        <div>
-          <h3 className="text-lg sm:text-2xl font-bold mb-3 sm:mb-4">{formatDate(selectedDate)}</h3>
+              {/* Grid */}
+              <div className="grid grid-cols-7 gap-1 mb-6">
+                {weekDays.map(d => (
+                  <div key={d} className="text-center text-[9px] font-bold text-muted-foreground/20 uppercase py-1">{d}</div>
+                ))}
+                {days.map((day, i) => {
+                  if (!day) return <div key={`e-${i}`} />
+                  const isSelected = isSameDay(day, selectedDate)
+                  const isToday = isSameDay(day, new Date())
+                  const hasEntries = hasEntriesOnDate(day)
 
-          <div className="bg-card border border-border rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 space-y-3">
-            <h4 className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Add Note
-            </h4>
-            <input
-              value={newNoteTitle}
-              onChange={(e) => setNewNoteTitle(e.target.value)}
-              placeholder="Note title (optional)"
-              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
-            />
-            <textarea
-              value={newNoteContent}
-              onChange={(e) => setNewNoteContent(e.target.value)}
-              placeholder="Write a quick note for this date..."
-              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[90px]"
-            />
-            <button
-              onClick={handleAddNote}
-              disabled={!newNoteContent.trim()}
-              className={cn(
-                'w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm min-h-[44px]',
-                'bg-primary text-primary-foreground hover:bg-primary/90 transition-colors',
-                'disabled:opacity-50 disabled:cursor-not-allowed'
-              )}
-            >
-              <Plus size={16} />
-              Add Note
-            </button>
-          </div>
-
-          {!entries?.length && !voiceEntries?.length && !diaryEntry ? (
-            <div className="text-center py-12 bg-muted rounded-lg">
-              <p className="text-muted-foreground">No entries for this date</p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {entries && entries.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    Entries
-                  </h4>
-                  {entries.map((entry) => (
-                    <div
-                      key={entry.id}
+                  return (
+                    <button
+                      key={day.toISOString()}
+                      onClick={() => setSelectedDate(day)}
                       className={cn(
-                        'bg-card border-l-4 border-border rounded-lg p-4',
-                        entryTypeColors[entry.type] ?? 'border-l-border'
+                        "aspect-square flex flex-col items-center justify-center rounded-xl text-sm font-bold transition-all relative",
+                        isSelected
+                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105 z-10"
+                          : "hover:bg-muted text-muted-foreground",
+                        isToday && !isSelected && "ring-2 ring-primary/20 bg-primary/5 text-primary"
                       )}
                     >
-                      <div className="flex items-start gap-3">
-                        {entry.type === 'todo' && (
-                          <button
-                            onClick={() => handleToggleComplete(entry)}
-                            className="mt-0.5 flex-shrink-0"
-                          >
-                            {entry.completed ? (
-                              <CheckCircle2 className="text-green-500" size={20} />
-                            ) : (
-                              <Circle className="text-muted-foreground" size={20} />
-                            )}
-                          </button>
-                        )}
+                      {day.getDate()}
+                      {hasEntries && (
+                        <div className={cn(
+                          "absolute bottom-1.5 w-1 h-1 rounded-full",
+                          isSelected ? "bg-white" : "bg-primary/40"
+                        )} />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
 
-                        <div className="flex-1 min-w-0">
-                          <h4
-                            className={cn(
-                              'font-medium mb-1',
-                              entry.completed && 'line-through text-muted-foreground'
-                            )}
-                          >
-                            {stripHtml(entry.title || '') || stripHtml(entry.content).slice(0, 50) || 'Untitled'}
-                          </h4>
-                          {entry.content && stripHtml(entry.content) !== stripHtml(entry.title || '') && (
-                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                              {stripHtml(ensureString(entry.content))}
-                            </p>
-                          )}
+              <button
+                onClick={goToToday}
+                className="w-full py-3.5 bg-muted/30 hover:bg-muted rounded-2xl text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground transition-all"
+              >
+                Jump to Today
+              </button>
+            </div>
 
-                          {entry.tags && entry.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {entry.tags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded text-xs"
-                                >
-                                  #{tag}
-                                </span>
-                              ))}
-                            </div>
+            {/* Dynamic Summary Card */}
+            <div className="hidden lg:block bg-primary/5 border border-primary/10 rounded-[32px] p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <CalendarIcon size={14} className="text-primary/60" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">Journal Vitals</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-center sm:text-left">
+                <div className="space-y-0.5">
+                  <div className="text-2xl font-bold tracking-tight">{monthEntries?.length || 0}</div>
+                  <div className="text-[9px] font-semibold uppercase text-muted-foreground/50 tracking-widest">Monthly Echos</div>
+                </div>
+                <div className="space-y-0.5">
+                  <div className="text-2xl font-bold tracking-tight">{sortedEntries.length}</div>
+                  <div className="text-[9px] font-semibold uppercase text-muted-foreground/50 tracking-widest">Daily Records</div>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          {/* RIGHT: The Canvas (Day View) */}
+          <main className="space-y-8 animate-in fade-in slide-in-from-bottom duration-1000 delay-200">
+            {/* Selected Date Header */}
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-border/10">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-primary">
+                  <div className="w-1 h-1 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(37,99,235,0.4)]" />
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.5em]">Active Perspective</span>
+                </div>
+                <h2 className="text-4xl sm:text-6xl font-bold tracking-tighter text-foreground">
+                  {formatDate(selectedDate)}
+                </h2>
+              </div>
+            </div>
+
+            {/* Unified Interaction Box */}
+            <div className="bg-card/40 backdrop-blur-xl border border-border/40 rounded-[40px] p-6 sm:p-10 shadow-2xl shadow-black/5 dark:shadow-white/5 ring-1 ring-black/5 dark:ring-white/5 transition-all focus-within:shadow-primary/5 focus-within:-translate-y-1">
+              <div className="flex items-center gap-3 mb-6">
+                <Plus size={18} className="text-primary" />
+                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/60">Annotate this day</span>
+              </div>
+
+              <div className="min-h-[140px]">
+                <TiptapEditor
+                  key={editorKey}
+                  content={newNoteContent}
+                  onChange={setNewNoteContent}
+                  onEnter={handleAddNote}
+                  placeholder="Start typing a memory or action..."
+                />
+              </div>
+
+              <div className="flex justify-between items-center mt-8 pt-8 border-t border-border/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
+                  <p className="text-[10px] text-muted-foreground/40 uppercase tracking-[0.2em] font-semibold">Memory Sync Active</p>
+                </div>
+                <button
+                  onClick={() => handleAddNote(newNoteContent)}
+                  className="px-8 py-3 bg-primary text-primary-foreground rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+                >
+                  Commit Note
+                </button>
+              </div>
+            </div>
+
+            {/* Day Timeline */}
+            <div className="space-y-8 py-4">
+              {sortedEntries.length === 0 ? (
+                <div className="text-center py-12 bg-card/10 rounded-[32px] border-2 border-dashed border-border/10">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-[20px] bg-background border border-border/50 mb-4 text-muted-foreground/10">
+                    <StickyNote size={24} />
+                  </div>
+                  <h3 className="text-xl font-black text-foreground/20 tracking-tight">Zero traces found</h3>
+                  <p className="text-xs text-muted-foreground/30 font-medium mt-1">Log your first thought for this perspective above.</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {sortedEntries.map((entry: Entry) => (
+                    <div key={entry.id} className="group flex gap-6">
+                      {/* Time marker */}
+                      <div className="hidden sm:flex flex-col items-end pt-1 w-20 shrink-0 opacity-40 group-hover:opacity-100 transition-opacity">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-foreground">
+                          {new Date(entry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <span className="text-[8px] font-black uppercase text-primary/60 tracking-tighter mt-0.5">{entry.type}</span>
+                      </div>
+
+                      {/* Content block */}
+                      <div className="flex-1 space-y-2">
+                        <div className={cn(
+                          "text-xl sm:text-2xl font-black tracking-tight text-foreground leading-tight",
+                          entry.completed && "line-through opacity-20"
+                        )}>
+                          {entry.title ? stripHtml(entry.title) : (
+                            <div dangerouslySetInnerHTML={{ __html: ensureString(entry.content) }} className="prose prose-sm dark:prose-invert max-w-none inline" />
                           )}
                         </div>
 
-                        <button
-                          onClick={() => handleDeleteEntry(entry.id)}
-                          className="text-muted-foreground hover:text-destructive transition-colors"
-                          aria-label="Delete"
-                        >
-                          ×
-                        </button>
+                        {entry.title && entry.content && stripHtml(entry.content) !== stripHtml(entry.title) && (
+                          <div className={cn(
+                            "prose prose-sm dark:prose-invert max-w-none prose-p:leading-snug text-muted-foreground/80",
+                            entry.completed && "line-through opacity-10"
+                          )}>
+                            <div dangerouslySetInnerHTML={{ __html: ensureString(entry.content) }} />
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-3 pt-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                          {entry.type === 'todo' && (
+                            <button
+                              onClick={() => handleToggleComplete(entry)}
+                              className={cn(
+                                "px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all",
+                                entry.completed
+                                  ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+                                  : "bg-muted text-muted-foreground hover:bg-muted/80 border border-border/50"
+                              )}
+                            >
+                              {entry.completed ? "Achieved" : "Commit"}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDeleteEntry(entry.id)}
+                            className="p-1.5 text-destructive/30 hover:text-destructive hover:bg-destructive/5 rounded-lg transition-all"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
-
-              {voiceEntries && voiceEntries.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    Voice Notes
-                  </h4>
-                  {voiceEntries.map((item) => (
-                    <div
-                      key={item.id}
-                      className="bg-card border-l-4 border-blue-400 rounded-lg p-4"
-                    >
-                      <div
-                        dangerouslySetInnerHTML={{ __html: ensureString(item.content) }}
-                        className="prose prose-sm dark:prose-invert max-w-none text-foreground"
-                      />
-                      {item.tags && item.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {item.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded text-xs"
-                            >
-                              #{tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {diaryEntry && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    Daily Notes
-                  </h4>
-                  <div
-                    className="prose prose-sm dark:prose-invert max-w-none bg-card border border-border rounded-lg p-4"
-                    dangerouslySetInnerHTML={{ __html: renderDiaryHtml(diaryEntry) }}
-                  />
-                </div>
-              )}
             </div>
-          )}
+          </main>
         </div>
       </div>
     </div>

@@ -57,7 +57,7 @@ export function VoiceRecorder() {
 
           // Check if this is a connection error and offer fallback
           if (errorMessage.includes('Connection error') ||
-              errorMessage.includes('API key not configured')) {
+            errorMessage.includes('API key not configured')) {
 
             // Automatically fallback to offline mode
             if (speechRecognition.isSupported) {
@@ -184,164 +184,177 @@ export function VoiceRecorder() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Online/Offline Mode Toggle */}
-      {speechRecognition.isSupported && (
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 p-3 sm:p-4 bg-muted/50 rounded-lg">
-          <span className="text-xs sm:text-sm font-medium text-muted-foreground">
-            Mode:
-          </span>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <button
-              onClick={() => {
-                setUseOnlineMode(false)
-                setSetupWarning(null)
-                setError(null)
-              }}
-              disabled={isRecording}
-              className={cn(
-                'flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium transition-all text-xs sm:text-sm flex items-center justify-center gap-2 min-h-[44px]',
-                !useOnlineMode
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-                isRecording && 'opacity-50 cursor-not-allowed'
-              )}
-            >
-              <WifiOff className="w-4 h-4" />
-              <span>Offline</span>
-            </button>
-            <button
-              onClick={() => {
-                setUseOnlineMode(true)
-                setSetupWarning(null)
-                setError(null)
-              }}
-              disabled={isRecording}
-              className={cn(
-                'flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg font-medium transition-all text-xs sm:text-sm flex items-center justify-center gap-2 min-h-[44px]',
-                useOnlineMode
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-                isRecording && 'opacity-50 cursor-not-allowed'
-              )}
-            >
-              <Wifi className="w-4 h-4" />
-              <span>Online {groqConfigured && '(Groq)'}</span>
-            </button>
+      <div className="space-y-8 sm:space-y-12 animate-in fade-in duration-700">
+        {/* Mode Toggle - Synced with Card Tabs */}
+        {speechRecognition.isSupported && (
+          <div className="flex justify-center px-4">
+            <div className="flex items-center gap-1 bg-card/40 backdrop-blur-md p-1.5 rounded-[24px] border border-border/40 shadow-sm ring-1 ring-black/5 dark:ring-white/5 w-full max-w-sm">
+              <button
+                onClick={() => {
+                  setUseOnlineMode(false)
+                  setSetupWarning(null)
+                  setError(null)
+                }}
+                disabled={isRecording}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[20px] text-[10px] font-black uppercase tracking-[0.2em] transition-all',
+                  !useOnlineMode
+                    ? 'bg-background text-primary shadow-sm border border-border/20'
+                    : 'text-muted-foreground hover:bg-muted/30',
+                  isRecording && 'opacity-50'
+                )}
+              >
+                <WifiOff size={14} />
+                <span>Offline</span>
+              </button>
+              <button
+                onClick={() => {
+                  setUseOnlineMode(true)
+                  setSetupWarning(null)
+                  setError(null)
+                }}
+                disabled={isRecording}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[20px] text-[10px] font-black uppercase tracking-[0.2em] transition-all',
+                  useOnlineMode
+                    ? 'bg-background text-primary shadow-sm border border-border/20'
+                    : 'text-muted-foreground hover:bg-muted/30',
+                  isRecording && 'opacity-50'
+                )}
+              >
+                <Wifi size={14} />
+                <span>Online</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Mode Status Pill */}
+        <div className="flex justify-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/5 rounded-full border border-primary/10">
+            <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.3)]", useOnlineMode ? "bg-primary" : "bg-muted-foreground/40")} />
+            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">
+              {useOnlineMode ? "Groq Intelligence Active" : "Private Boundary Mode"}
+            </span>
           </div>
         </div>
-      )}
 
-      {/* Mode Info */}
-      <div className="text-center text-xs sm:text-sm text-muted-foreground px-2">
-        {useOnlineMode ? (
-          <span>✨ Online: Lightning-fast, high-accuracy AI transcription (Groq Whisper)</span>
-        ) : (
-          <span>🔒 Offline: Private browser-based speech recognition</span>
+        {/* Setup Warning */}
+        {setupWarning && (
+          <div className="mx-auto max-w-md p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-2xl flex items-center gap-3 text-xs">
+            <AlertCircle className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+            <p className="text-yellow-600 dark:text-yellow-200/60 font-medium leading-relaxed">{setupWarning}</p>
+          </div>
+        )}
+
+        {/* Recording Core */}
+        <div className="flex flex-col items-center">
+          <div className="relative group">
+            {/* Pulse Effect Layers */}
+            {isRecording && (
+              <>
+                <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping duration-[3s]" />
+                <div className="absolute inset-[-8px] bg-primary/10 rounded-full animate-ping duration-[2s]" />
+              </>
+            )}
+
+            <button
+              onClick={handleToggleRecording}
+              disabled={isTranscribing}
+              className={cn(
+                'relative w-36 h-36 sm:w-44 sm:h-44 rounded-full flex items-center justify-center transition-all duration-700',
+                'hover:scale-[1.02] active:scale-95 shadow-2xl',
+                isRecording
+                  ? 'bg-destructive text-white shadow-destructive/40 ring-[12px] ring-destructive/10'
+                  : 'bg-background border border-border shadow-black/5 dark:shadow-white/5 ring-[12px] ring-muted/20'
+              )}
+            >
+              {isTranscribing ? (
+                <Loader2 size={48} className="animate-spin text-primary opacity-50" />
+              ) : isRecording ? (
+                <div className="flex flex-col items-center gap-2 animate-in zoom-in duration-500">
+                  <MicOff size={48} />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">Recording</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2 group-hover:text-primary transition-colors">
+                  <Mic size={48} className="opacity-80 group-hover:opacity-100" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Tap to Capture</span>
+                </div>
+              )}
+
+              {/* Inner Glow for Recording */}
+              {isRecording && (
+                <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
+              )}
+            </button>
+          </div>
+
+          {/* Process Indicator */}
+          {isTranscribing && (
+            <div className="mt-8 flex items-center gap-2 px-4 py-2 bg-muted/30 rounded-full border border-border/20 backdrop-blur-sm animate-in slide-in-from-bottom-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">Decoding Waveform</span>
+            </div>
+          )}
+        </div>
+
+        {/* Error Message */}
+        {(currentError || error) && (
+          <div className="p-4 bg-destructive/10 text-destructive rounded-lg space-y-3">
+            <p className="text-center">{error || currentError}</p>
+          </div>
+        )}
+
+        {/* Transcript Display */}
+        {transcript && (
+          <div className="space-y-4">
+            <div className="p-3 sm:p-4 bg-muted rounded-lg min-h-32 max-h-64 overflow-y-auto">
+              <p className="text-sm sm:text-base text-foreground whitespace-pre-wrap">
+                {transcript}
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center items-stretch sm:items-center px-2 sm:px-0">
+              <button
+                onClick={handleSave}
+                disabled={isSaving || isRecording || isTranscribing}
+                className={cn(
+                  'flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium min-h-[44px]',
+                  'transition-colors text-sm sm:text-base',
+                  'bg-primary text-primary-foreground hover:bg-primary/90',
+                  'disabled:opacity-50 disabled:cursor-not-allowed'
+                )}
+              >
+                <Save size={18} className="sm:w-5 sm:h-5" />
+                {isSaving ? 'Saving...' : 'Save'}
+              </button>
+
+              <button
+                onClick={handleDiscard}
+                disabled={isSaving || isTranscribing}
+                className={cn(
+                  'flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium min-h-[44px]',
+                  'transition-colors text-sm sm:text-base',
+                  'bg-secondary text-secondary-foreground hover:bg-secondary/90',
+                  'disabled:opacity-50 disabled:cursor-not-allowed'
+                )}
+              >
+                <X size={18} className="sm:w-5 sm:h-5" />
+                Discard
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Success Message */}
+        {saveSuccess && (
+          <div className="p-4 bg-green-500/10 text-green-700 dark:text-green-400 rounded-lg text-center font-medium animate-in fade-in">
+            Saved successfully!
+          </div>
         )}
       </div>
-
-      {/* Setup Warning */}
-      {setupWarning && (
-        <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-start gap-2 text-sm">
-          <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
-          <p className="text-yellow-800 dark:text-yellow-200">{setupWarning}</p>
-        </div>
-      )}
-
-      {/* Recording Button */}
-      <div className="space-y-4 py-4 sm:py-6">
-        <div className="flex justify-center items-center">
-          <button
-            onClick={handleToggleRecording}
-            disabled={isTranscribing}
-            className={cn(
-              'relative w-28 h-28 sm:w-32 sm:h-32 rounded-full flex items-center justify-center',
-              'transition-all duration-300 transform hover:scale-105',
-              'focus:outline-none focus:ring-4 focus:ring-primary/50',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-              isRecording
-                ? 'bg-destructive text-destructive-foreground animate-pulse-slow shadow-lg shadow-destructive/50'
-                : 'bg-primary text-primary-foreground shadow-lg shadow-primary/30'
-            )}
-            aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-          >
-            {isTranscribing ? (
-              <Loader2 size={40} className="sm:w-12 sm:h-12 animate-spin" />
-            ) : isRecording ? (
-              <MicOff size={40} className="sm:w-12 sm:h-12" />
-            ) : (
-              <Mic size={40} className="sm:w-12 sm:h-12" />
-            )}
-            {isRecording && !isTranscribing && (
-              <span className="absolute -bottom-8 text-xs sm:text-sm font-medium whitespace-nowrap">
-                Recording...
-              </span>
-            )}
-            {isTranscribing && (
-              <span className="absolute -bottom-8 text-xs sm:text-sm font-medium whitespace-nowrap">
-                Transcribing...
-              </span>
-            )}
-          </button>
-        </div>
-
-      </div>
-
-      {/* Error Message */}
-      {(currentError || error) && (
-        <div className="p-4 bg-destructive/10 text-destructive rounded-lg space-y-3">
-          <p className="text-center">{error || currentError}</p>
-        </div>
-      )}
-
-      {/* Transcript Display */}
-      {transcript && (
-        <div className="space-y-4">
-          <div className="p-3 sm:p-4 bg-muted rounded-lg min-h-32 max-h-64 overflow-y-auto">
-            <p className="text-sm sm:text-base text-foreground whitespace-pre-wrap">
-              {transcript}
-            </p>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center items-stretch sm:items-center px-2 sm:px-0">
-            <button
-              onClick={handleSave}
-              disabled={isSaving || isRecording || isTranscribing}
-              className={cn(
-                'flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium min-h-[44px]',
-                'transition-colors text-sm sm:text-base',
-                'bg-primary text-primary-foreground hover:bg-primary/90',
-                'disabled:opacity-50 disabled:cursor-not-allowed'
-              )}
-            >
-              <Save size={18} className="sm:w-5 sm:h-5" />
-              {isSaving ? 'Saving...' : 'Save'}
-            </button>
-
-            <button
-              onClick={handleDiscard}
-              disabled={isSaving || isTranscribing}
-              className={cn(
-                'flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium min-h-[44px]',
-                'transition-colors text-sm sm:text-base',
-                'bg-secondary text-secondary-foreground hover:bg-secondary/90',
-                'disabled:opacity-50 disabled:cursor-not-allowed'
-              )}
-            >
-              <X size={18} className="sm:w-5 sm:h-5" />
-              Discard
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Success Message */}
-      {saveSuccess && (
-        <div className="p-4 bg-green-500/10 text-green-700 dark:text-green-400 rounded-lg text-center font-medium animate-in fade-in">
-          Saved successfully!
-        </div>
-      )}
     </div>
   )
 }

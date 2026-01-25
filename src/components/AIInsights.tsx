@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Send, Loader2, Sparkles, CheckCircle2, Mic, MicOff } from 'lucide-react'
+import { Send, Loader2, Sparkles, CheckCircle2, Mic, MicOff, Inbox } from 'lucide-react'
 import { marked } from 'marked'
 import { cn } from '../lib/utils'
 import { useAIChat } from '../hooks/useAIChat'
@@ -8,221 +8,133 @@ import { AIActionCard } from './AIActionCard'
 export function AIInsights() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const {
-    messages,
-    input,
-    setInput,
-    isLoading,
-    actionsCreated,
-    isListening,
-    handleVoiceToggle,
-    handleSend,
-    handleAcceptAction,
-    handleRejectAction,
-    handleAcceptAll,
-    handleUpdatePendingAction,
-    handleSendMessage,
-    handleClearChat,
+    messages, input, setInput, isLoading, actionsCreated, isListening,
+    handleVoiceToggle, handleSend, handleAcceptAction, handleRejectAction,
+    handleAcceptAll, handleSendMessage, handleClearChat,
     messagesEndRef,
-    speechRecognition,
   } = useAIChat({
     initialMessages: [
       {
         role: 'assistant',
-        content: 'Hi! I\'m your AI assistant. Tell me what you need to do, and I\'ll help organize it for you. Just talk naturally! 😊',
+        content: '### ☀️ Welcome to Chronicle\nI can help you capture thoughts or summarize your agenda. Just speak naturally!',
       },
     ],
   })
 
-  useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
+  useEffect(() => { inputRef.current?.focus() }, [])
 
   const quickPrompts = [
     'How does my day look?',
-    'What are my top priorities today?',
-    'Summarize what is due today.',
-    'Show me urgent items I should do first.',
+    'Any overdue tasks?',
+    'What is due tomorrow?',
   ]
 
-  const handleQuickPrompt = (prompt: string) => {
-    setInput(prompt)
-    handleSendMessage(prompt)
-  }
-
   const renderMarkdown = (content: string) => {
-    const html = marked.parse(content, { async: false }) as string
-    return html
+    return marked.parse(content, {
+      async: false,
+      breaks: true,
+      gfm: true
+    }) as string
   }
 
   return (
-    <div className="flex flex-col flex-1 h-full max-w-4xl mx-auto p-4 sm:p-6">
-      {/* Header */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-primary" />
-            <h2 className="text-2xl font-bold">AI Insights</h2>
+    <div className="flex flex-col flex-1 max-w-4xl mx-auto p-4 sm:p-6 pb-24 md:pb-6 min-h-0 bg-background/50">
+      {/* Header Area */}
+      <div className="flex items-center justify-between mb-8 px-2">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-primary/10 rounded-2xl">
+            <Sparkles className="w-5 h-5 text-primary" />
           </div>
-          <button
-            onClick={handleClearChat}
-            className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
-          >
-            Clear chat
-          </button>
+          <h2 className="text-xl font-semibold tracking-tight">AI Assistant</h2>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Chat naturally with AI. It will automatically create todos, reminders, and notes for you.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {quickPrompts.map((prompt) => (
-            <button
-              key={prompt}
-              onClick={() => handleQuickPrompt(prompt)}
-              className="text-xs px-3 py-1.5 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
-            >
-              {prompt}
-            </button>
-          ))}
-        </div>
-        {actionsCreated > 0 && (
-          <div className="mt-2 flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-            <CheckCircle2 className="w-4 h-4" />
-            <span>{actionsCreated} item{actionsCreated > 1 ? 's' : ''} created!</span>
-          </div>
-        )}
+        <button
+          onClick={handleClearChat}
+          className="text-[10px] font-medium uppercase tracking-widest px-4 py-2 rounded-xl bg-muted/50 hover:bg-muted transition-all"
+        >
+          Reset Session
+        </button>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-4 bg-muted/30 rounded-lg">
+      {/* Message Feed */}
+      <div className="flex-1 overflow-y-auto overscroll-contain space-y-6 mb-8 px-2 custom-scrollbar">
         {messages.map((message, index) => (
-          <div key={index} className="space-y-2">
+          <div key={index} className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
             <div
               className={cn(
-                'rounded-lg p-3 text-sm',
-                message.role === 'user' ? 'bg-primary text-primary-foreground ml-12' : 'bg-card border border-border mr-12'
+                'group relative max-w-[85%] rounded-[28px] p-5 text-sm transition-all',
+                message.role === 'user'
+                  ? 'bg-primary text-primary-foreground ml-auto shadow-lg shadow-primary/20 rounded-br-lg'
+                  : 'bg-transparent border-none shadow-none rounded-bl-lg'
               )}
             >
-              {message.role === 'assistant' ? (
-                <div
-                  className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5"
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">{message.content}</p>
-              )}
+              <div
+                className={cn(
+                  "prose prose-sm dark:prose-invert max-w-none prose-p:my-0.5 prose-ul:my-0.5 prose-ul:list-none prose-ul:pl-0 prose-li:my-0 prose-headings:font-semibold prose-hr:my-2 leading-relaxed",
+                  message.role === 'user' && "text-primary-foreground prose-invert"
+                )}
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
+              />
             </div>
 
-            {/* Pending Actions - Show action cards for user to confirm */}
+            {/* Confirmation Area for Actions */}
             {message.pendingActions && message.pendingActions.length > 0 && (
-              <div className="space-y-2 mr-12">
-                {message.pendingActions.some(
-                  (action, actionIdx) =>
-                    !message.rejectedActionIndices?.includes(actionIdx) &&
-                    (action.type === 'todo' || action.type === 'reminder') &&
-                    !action.date
-                ) && (
-                    <div className="rounded-lg border border-border bg-background p-3 text-xs text-muted-foreground space-y-2">
-                      <div className="font-medium text-foreground">Set due dates fast</div>
-                      <div className="space-y-2">
-                        {message.pendingActions.map((action, actionIdx) => {
-                          if (
-                            message.rejectedActionIndices?.includes(actionIdx) ||
-                            (action.type !== 'todo' && action.type !== 'reminder') ||
-                            action.date
-                          ) {
-                            return null
-                          }
-
-                          const quickDueOptions = [
-                            {
-                              label: 'In 2 hours',
-                              getDate: () => new Date(Date.now() + 2 * 60 * 60 * 1000),
-                            },
-                            {
-                              label: 'Tomorrow 9am',
-                              getDate: () => {
-                                const date = new Date()
-                                date.setDate(date.getDate() + 1)
-                                date.setHours(9, 0, 0, 0)
-                                return date
-                              },
-                            },
-                            {
-                              label: 'Next week',
-                              getDate: () => {
-                                const date = new Date()
-                                date.setDate(date.getDate() + 7)
-                                date.setHours(9, 0, 0, 0)
-                                return date
-                              },
-                            },
-                          ]
-
-                          return (
-                            <div key={`${action.title}-${actionIdx}`} className="flex flex-wrap items-center gap-2">
-                              <span className="text-foreground">"{action.title}"</span>
-                              {quickDueOptions.map((option) => (
-                                <button
-                                  key={option.label}
-                                  onClick={() =>
-                                    handleUpdatePendingAction(index, actionIdx, { date: option.getDate() })
-                                  }
-                                  className="px-2 py-1 rounded bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
-                                >
-                                  {option.label}
-                                </button>
-                              ))}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {message.pendingActions.filter((_, i) => !message.rejectedActionIndices?.includes(i)).length} action(s) to review
-                  </span>
-                  {message.pendingActions.filter((_, i) => !message.rejectedActionIndices?.includes(i)).length > 1 && (
+              <div className="space-y-4 mr-[15%]">
+                <div className="flex items-center justify-between px-4">
+                  <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/40">
+                    <Inbox size={12} />
+                    Action Staging ({message.pendingActions.length})
+                  </div>
+                  {message.pendingActions.length > 1 && (
                     <button
                       onClick={() => handleAcceptAll(index)}
-                      className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                      className="text-[10px] font-medium uppercase tracking-widest text-primary hover:underline transition-all"
                     >
-                      Accept All
+                      Confirm All
                     </button>
                   )}
                 </div>
-                {message.pendingActions.map((action, actionIdx) => (
-                  <AIActionCard
-                    key={actionIdx}
-                    action={action}
-                    onAccept={(editedAction) => handleAcceptAction(index, actionIdx, editedAction)}
-                    onReject={() => handleRejectAction(index, actionIdx)}
-                    isRejected={message.rejectedActionIndices?.includes(actionIdx)}
-                  />
-                ))}
+
+                <div className="grid grid-cols-1 gap-3">
+                  {message.pendingActions.map((action, actionIdx) => (
+                    <AIActionCard
+                      key={actionIdx}
+                      action={action}
+                      onAccept={(edited) => handleAcceptAction(index, actionIdx, edited)}
+                      onReject={() => handleRejectAction(index, actionIdx)}
+                      isRejected={message.rejectedActionIndices?.includes(actionIdx)}
+                    />
+                  ))}
+                </div>
               </div>
             )}
           </div>
         ))}
         {isLoading && (
-          <div className="flex gap-3">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <div className="bg-card border border-border rounded-lg p-3">
-              <Loader2 className="w-4 h-4 animate-spin" />
+          <div className="flex gap-4 animate-pulse ml-2 pb-8">
+            <div className="bg-card border border-border/40 rounded-2xl p-4 flex items-center gap-3">
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground/40">Synthesizing...</span>
             </div>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="space-y-2">
-        {speechRecognition.error && (
-          <div className="text-sm text-destructive">{speechRecognition.error}</div>
-        )}
-        <div className="flex gap-2">
+      {/* Interaction Area */}
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-2 px-2">
+          {quickPrompts.map(p => (
+            <button
+              key={p}
+              onClick={() => handleSendMessage(p)}
+              className="text-[10px] font-medium uppercase tracking-tight px-4 py-2 bg-muted/30 border border-border/10 rounded-xl hover:bg-primary/5 hover:text-primary transition-all active:scale-95"
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative group">
           <textarea
             ref={inputRef}
             value={input}
@@ -233,42 +145,38 @@ export function AIInsights() {
                 handleSend()
               }
             }}
-            placeholder="Type or speak your message... (Shift+Enter for new line)"
-            className="flex-1 p-3 border border-border rounded-lg bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Type a memory or command..."
+            className="w-full min-h-[100px] p-6 pr-24 border border-border/40 rounded-[32px] bg-card/40 backdrop-blur-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xl transition-all group-focus-within:-translate-y-1"
             rows={2}
             disabled={isLoading}
           />
-          <div className="flex flex-col gap-2">
+          <div className="absolute right-4 bottom-4 flex items-center gap-3">
             <button
               onClick={handleVoiceToggle}
               disabled={isLoading}
               className={cn(
-                'p-3 rounded-lg transition-colors',
-                isListening
-                  ? 'bg-destructive text-destructive-foreground'
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-                isLoading && 'opacity-50 cursor-not-allowed'
+                'p-4 rounded-2xl transition-all active:scale-90',
+                isListening ? 'bg-destructive text-white' : 'bg-muted text-muted-foreground hover:bg-muted-foreground hover:text-white'
               )}
-              aria-label={isListening ? 'Stop listening' : 'Start voice input'}
             >
               {isListening ? <MicOff size={20} /> : <Mic size={20} />}
             </button>
             <button
               onClick={handleSend}
               disabled={!input.trim() || isLoading}
-              className={cn(
-                'p-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90',
-                'transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-              )}
-              aria-label="Send message"
+              className="p-4 rounded-2xl bg-primary text-primary-foreground hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
             >
               {isLoading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
             </button>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground text-center">
-          Press Enter to send • Shift+Enter for new line • Click mic to speak
-        </p>
+
+        {actionsCreated > 0 && (
+          <div className="fixed bottom-32 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-emerald-500 text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl animate-in slide-in-from-bottom duration-300">
+            <CheckCircle2 size={12} />
+            {actionsCreated} Traces committed to Chronicle
+          </div>
+        )}
       </div>
     </div>
   )

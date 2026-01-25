@@ -1,77 +1,98 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { CheckCircle2, Circle, Clock, Flame, Calendar, Moon, RefreshCw } from 'lucide-react'
+import { Flame, Calendar, Moon, Trash2, ArrowRightLeft, Edit3, AlertCircle, Inbox, Clock } from 'lucide-react'
 import { db } from '../lib/db'
 import { cn, ensureDate, ensureString, stripHtml } from '../lib/utils'
 import type { Entry } from '../types'
 import { useState } from 'react'
 
-interface TimeHorizonSection {
-  id: 'now' | 'week' | 'later'
+type HorizonId = 'now' | 'week' | 'later'
+
+interface TimeHorizon {
+  id: HorizonId
   title: string
   description: string
-  icon: typeof Flame
+  icon: any
   color: string
-  filter: (entry: Entry, now: Date) => boolean
+  accent: string
 }
 
-const timeHorizons: TimeHorizonSection[] = [
+const timeHorizons: TimeHorizon[] = [
   {
     id: 'now',
-    title: 'Do Now',
-    description: 'Next 24 hours',
+    title: 'Focus Now',
+    description: 'Next 24 Hours',
     icon: Flame,
-    color: 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800',
-    filter: (entry, now) => {
-      const entryDate = ensureDate(entry.date)
-      if (!entryDate) return false
-      const hoursDiff = (entryDate.getTime() - now.getTime()) / (1000 * 60 * 60)
-      return hoursDiff >= -24 && hoursDiff <= 24
-    },
+    color: 'from-orange-500/10 to-transparent',
+    accent: 'text-orange-500'
   },
   {
     id: 'week',
     title: 'This Week',
-    description: 'Next 7 days',
+    description: 'Upcoming Sync',
     icon: Calendar,
-    color: 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800',
-    filter: (entry, now) => {
-      const entryDate = ensureDate(entry.date)
-      if (!entryDate) return false
-      const daysDiff = (entryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-      return daysDiff > 1 && daysDiff <= 7
-    },
+    color: 'from-blue-500/10 to-transparent',
+    accent: 'text-blue-500'
   },
   {
     id: 'later',
-    title: 'Later',
-    description: 'Backlog',
+    title: 'Horizon',
+    description: 'Future Traces',
     icon: Moon,
-    color: 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800',
-    filter: (entry, now) => {
-      const entryDate = ensureDate(entry.date)
-      if (!entryDate) return true // No date = backlog
-      const daysDiff = (entryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-      return daysDiff > 7
-    },
+    color: 'from-purple-500/10 to-transparent',
+    accent: 'text-purple-500'
   },
 ]
 
 export function FocusView() {
-  const [refreshKey, setRefreshKey] = useState(0)
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editBuffer, setEditBuffer] = useState<Partial<Entry>>({})
 
-  const entries = useLiveQuery(async () => {
+  const allEntries = useLiveQuery(async () => {
     return db.entries
       .filter((entry) => (entry.type === 'todo' || entry.type === 'reminder') && !entry.completed)
       .toArray()
-  }, [refreshKey])
+  }, [])
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true)
-    // Force a refresh of the query
-    setRefreshKey(prev => prev + 1)
-    // Small delay for visual feedback
-    setTimeout(() => setIsRefreshing(false), 500)
+  const now = new Date()
+
+  const getBucket = (entry: Entry): HorizonId => {
+    const entryDate = ensureDate(entry.date)
+    if (!entryDate) return 'later'
+    const daysDiff = (entryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    if (daysDiff <= 1) return 'now'
+    if (daysDiff <= 7) return 'week'
+    return 'later'
+  }
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Permanently remove this task?')) {
+      await db.entries.delete(id)
+    }
+  }
+
+  const handleMove = async (entry: Entry, target: HorizonId) => {
+    let newDate: Date | undefined
+    if (target === 'now') newDate = new Date()
+    else if (target === 'week') newDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+    else newDate = undefined // Clear date for Later
+
+    await db.entries.update(entry.id, {
+      date: newDate,
+      updatedAt: new Date()
+    })
+  }
+
+  const handleStartEdit = (entry: Entry) => {
+    setEditingId(entry.id)
+    setEditBuffer({ title: entry.title, content: entry.content })
+  }
+
+  const handleSaveEdit = async (id: string) => {
+    await db.entries.update(id, {
+      ...editBuffer,
+      updatedAt: new Date()
+    })
+    setEditingId(null)
   }
 
   const handleToggleComplete = async (entry: Entry) => {
@@ -81,137 +102,157 @@ export function FocusView() {
     })
   }
 
-  const now = new Date()
-
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-7xl">
-      <div className="mb-4 sm:mb-6">
-        <div className="flex items-start sm:items-center justify-between gap-3 mb-2 flex-wrap">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold">Focus View</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              AI-organized tasks by time horizon
-            </p>
+    <div className="container mx-auto px-4 lg:px-12 py-6 sm:py-12 max-w-[1400px]">
+      {/* Header Area */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12 animate-in fade-in slide-in-from-top duration-700">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-primary">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.5em]">Cognitive Load</span>
           </div>
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className={cn(
-              'flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all min-h-[44px] whitespace-nowrap',
-              isRefreshing && 'opacity-50 cursor-not-allowed'
-            )}
-          >
-            <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
-            <span className="hidden sm:inline">Refresh</span>
-          </button>
+          <h2 className="text-4xl sm:text-6xl font-bold tracking-tighter text-foreground drop-shadow-sm">
+            Focus Mode
+          </h2>
+        </div>
+        <div className="bg-primary/5 px-6 py-3 rounded-2xl border border-primary/10 backdrop-blur-sm">
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-primary/60 mb-1">Active Traces</div>
+          <div className="text-2xl font-bold tracking-tighter">{allEntries?.length || 0}</div>
         </div>
       </div>
 
-      <div className="space-y-4 sm:space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {timeHorizons.map((horizon) => {
+          const sectionEntries = allEntries?.filter(e => getBucket(e) === horizon.id) || []
           const Icon = horizon.icon
-          const sectionEntries = entries?.filter((e) => horizon.filter(e, now)) || []
 
           return (
-            <div
-              key={horizon.id}
-              className={cn(
-                'rounded-lg border p-3 sm:p-6 transition-all',
-                horizon.color
-              )}
-            >
-              <div className="flex items-start sm:items-center justify-between gap-3 mb-3 sm:mb-4 flex-wrap">
-                <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                  <Icon className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <h2 className="text-base sm:text-xl font-semibold">{horizon.title}</h2>
-                    <p className="text-xs sm:text-sm text-muted-foreground">{horizon.description}</p>
+            <div key={horizon.id} className="space-y-6">
+              {/* Box Header */}
+              <div className="flex items-center justify-between px-2">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Icon size={16} className={horizon.accent} />
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/40">{horizon.description}</span>
                   </div>
+                  <h3 className="text-xl font-bold tracking-tight">{horizon.title}</h3>
                 </div>
-                <div className="text-xs sm:text-sm font-medium px-2 sm:px-3 py-1 bg-background rounded-full whitespace-nowrap flex-shrink-0">
-                  {sectionEntries.length} {sectionEntries.length === 1 ? 'task' : 'tasks'}
-                </div>
+                <div className="text-[10px] font-bold px-3 py-1 bg-muted/40 rounded-full">{sectionEntries.length}</div>
               </div>
 
-              {sectionEntries.length === 0 ? (
-                <p className="text-center text-muted-foreground py-6 sm:py-8 text-sm">
-                  No tasks in this time horizon
-                </p>
-              ) : (
-                <div className="space-y-2 sm:space-y-3">
-                  {sectionEntries.map((entry) => (
+              {/* Box Content */}
+              <div className={cn(
+                "min-h-[400px] rounded-[40px] border border-border/40 bg-card/40 backdrop-blur-xl p-4 sm:p-6 shadow-2xl shadow-black/5 dark:shadow-white/5 space-y-4 transition-all",
+                sectionEntries.length === 0 && "border-dashed opacity-50 bg-transparent"
+              )}>
+                {sectionEntries.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center p-8 space-y-4">
+                    <div className="p-4 bg-muted/10 rounded-full text-muted-foreground/20">
+                      <Inbox size={32} />
+                    </div>
+                    <p className="text-xs font-medium text-muted-foreground/40 leading-relaxed uppercase tracking-widest">Horizon Clear</p>
+                  </div>
+                ) : (
+                  sectionEntries.map(entry => (
                     <div
                       key={entry.id}
-                      className="flex items-start gap-2 sm:gap-3 p-3 sm:p-4 bg-background rounded-lg border hover:border-primary/50 transition-colors"
+                      className="group bg-background/50 backdrop-blur-sm border border-border/20 rounded-3xl p-5 hover:border-primary/20 transition-all hover:shadow-lg hover:shadow-primary/5 active:scale-[0.98]"
                     >
-                      <button
-                        onClick={() => handleToggleComplete(entry)}
-                        className="mt-0.5 sm:mt-1 flex-shrink-0"
-                      >
-                        {entry.completed ? (
-                          <CheckCircle2 className="text-green-500 w-5 h-5 sm:w-6 sm:h-6" />
-                        ) : (
-                          <Circle className="text-muted-foreground hover:text-primary w-5 h-5 sm:w-6 sm:h-6" />
-                        )}
-                      </button>
-
-                      <div className="flex-1 min-w-0">
-                        {(() => {
-                          const entryContent = ensureString(entry.content)
-                          return (
-                            <>
-                              <h3 className="font-medium text-sm sm:text-base">
-                                {stripHtml(entry.title || '') || stripHtml(entryContent).substring(0, 60)}
-                              </h3>
-                              {entry.title && stripHtml(entryContent) !== stripHtml(entry.title) && (
-                                <p className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-2">
-                                  {stripHtml(entryContent)}
-                                </p>
-                              )}
-                            </>
-                          )
-                        })()}
-
-                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-2">
-                          {(() => {
-                            const entryDate = ensureDate(entry.date)
-                            return entryDate ? (
-                              <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
-                                <Clock className="w-3 h-3" />
-                                <span className="hidden sm:inline">{entryDate.toLocaleDateString()} {entryDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                <span className="sm:hidden">{entryDate.toLocaleDateString([], { month: 'short', day: 'numeric' })} {entryDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                              </div>
-                            ) : null
-                          })()}
-                          {(entry.tags || []).length > 0 && (entry.tags || []).map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-1.5 sm:px-2 py-0.5 bg-secondary text-secondary-foreground rounded text-[10px] sm:text-xs"
-                            >
-                              #{tag}
-                            </span>
-                          ))}
-                          {entry.type === 'reminder' && (
-                            <span className="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded text-xs">
-                              Reminder
-                            </span>
-                          )}
+                      {editingId === entry.id ? (
+                        <div className="space-y-4">
+                          <input
+                            value={editBuffer.title}
+                            onChange={e => setEditBuffer({ ...editBuffer, title: e.target.value })}
+                            className="w-full bg-background border-none rounded-xl px-3 py-2 text-sm font-bold focus:ring-1 focus:ring-primary"
+                            placeholder="Title"
+                          />
+                          <textarea
+                            value={editBuffer.content}
+                            onChange={e => setEditBuffer({ ...editBuffer, content: e.target.value })}
+                            className="w-full bg-background border-none rounded-xl px-3 py-2 text-xs h-20 resize-none"
+                            placeholder="Details"
+                          />
+                          <div className="flex gap-2">
+                            <button onClick={() => handleSaveEdit(entry.id)} className="flex-1 bg-primary text-primary-foreground py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest">Save Change</button>
+                            <button onClick={() => setEditingId(null)} className="px-4 bg-muted py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Cancel</button>
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="flex items-start gap-4">
+                            <button
+                              onClick={() => handleToggleComplete(entry)}
+                              className="w-5 h-5 mt-0.5 rounded-full border-2 border-primary/20 flex items-center justify-center hover:border-primary transition-all group-hover:bg-primary/5 shrink-0"
+                            >
+                              <div className="w-2 h-2 rounded-full bg-primary scale-0 group-hover:scale-50 transition-all" />
+                            </button>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-bold tracking-tight leading-tight line-clamp-2">{entry.title || stripHtml(ensureString(entry.content)).substring(0, 40)}</div>
+                              {entry.title && entry.content && stripHtml(ensureString(entry.content)) !== entry.title && (
+                                <p className="text-[11px] text-muted-foreground/60 mt-1 line-clamp-2 leading-relaxed">{stripHtml(ensureString(entry.content))}</p>
+                              )}
+
+                              <div className="flex flex-wrap gap-3 mt-3">
+                                {entry.date && (
+                                  <div className="flex items-center gap-1.5 text-[10px] font-semibold text-primary/60 uppercase tracking-tight">
+                                    <Clock size={10} />
+                                    {ensureDate(entry.date)?.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-4 border-t border-border/10 opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">
+                            <div className="flex items-center bg-muted/30 rounded-xl p-1 gap-1">
+                              {timeHorizons.map(h => h.id !== horizon.id && (
+                                <button
+                                  key={h.id}
+                                  onClick={() => handleMove(entry, h.id)}
+                                  className="p-1.5 hover:bg-background rounded-lg transition-all text-muted-foreground/40 hover:text-primary"
+                                  title={`Move to ${h.title}`}
+                                >
+                                  <ArrowRightLeft size={12} />
+                                </button>
+                              ))}
+                            </div>
+                            <button
+                              onClick={() => handleStartEdit(entry)}
+                              className="p-2 text-muted-foreground/40 hover:text-primary hover:bg-primary/5 rounded-xl transition-all"
+                              title="Quick Edit"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(entry.id)}
+                              className="ml-auto p-2 text-muted-foreground/20 hover:text-destructive hover:bg-destructive/5 rounded-xl transition-all"
+                              title="Discard Trace"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
             </div>
           )
         })}
       </div>
 
-      <div className="mt-8 p-4 bg-muted/50 rounded-lg">
-        <p className="text-sm text-muted-foreground">
-          💡 <strong>Pro tip:</strong> Focus on completing tasks in "Do Now" before moving to later sections.
-          AI automatically categorizes tasks based on due dates - no manual prioritization needed!
-        </p>
+      {/* Pro Tip Area */}
+      <div className="mt-12 p-8 bg-card/40 backdrop-blur-xl border border-border/40 rounded-[40px] flex items-start gap-4">
+        <div className="p-3 bg-primary/10 rounded-2xl text-primary shrink-0">
+          <AlertCircle size={20} />
+        </div>
+        <div className="space-y-1">
+          <h4 className="text-sm font-bold tracking-tight">Focus Logic Sync</h4>
+          <p className="text-xs text-muted-foreground/60 leading-relaxed uppercase tracking-widest font-semibold max-w-2xl">
+            Focus mode dynamically buckets your traces into time horizons. Items moved to "Focus Now" are prioritized for delivery in the next 24 hours. Items without a timestamp flow into your Horizon Backlog.
+          </p>
+        </div>
       </div>
     </div>
   )
